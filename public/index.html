@@ -41,7 +41,7 @@
   .hero { position: relative; background: linear-gradient(135deg, var(--hero-from), var(--hero-to)); color: #fff; padding: 28px 0 64px; }
   .hero h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -.01em; }
   .hero p { margin: 0; opacity: .85; }
-  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; margin-top: -40px; padding-bottom: 64px; align-items: start; }
+  .grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; margin-top: -40px; padding-bottom: 64px; align-items: start; }
   .col-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
@@ -106,7 +106,7 @@
   ul.points li { display: flex; gap: 10px; padding: 4px 0; }
   .mark { flex: none; width: 20px; height: 20px; border-radius: 50%; text-align: center;
           font-size: 12px; line-height: 20px; font-weight: 800; margin-top: 2px; }
-  .last { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+  /* .last stili aşağıda */
   .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 14px; }
   .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
@@ -116,6 +116,11 @@
   .stat.bad { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
   .stat.ok .label, .stat.warn .label, .stat.bad .label, .stat.ok .meta, .stat.warn .meta, .stat.bad .meta { color: inherit; opacity: .9; }
   .stats-note { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+  .last { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--field); border-left: 4px solid var(--vc, var(--accent)); }
+  .last .label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .last .lastdetail { margin-top: 6px; font-size: 15px; }
+  .last .orig { margin-top: 6px; font-size: 12px; color: var(--muted); font-style: italic; }
+  .last .lastmsg { font-size: 18px; font-weight: 700; line-height: 1.3; }
   h2.sec { margin: 16px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 18px; margin: 8px 0 0; }
   dt { color: var(--muted); }
@@ -357,6 +362,9 @@
     return a;
   }
   function keyOf(r) { return r.packageNumber || r.id; }
+  // Çeviri sunucudan gelir (descriptionTr/detailTr). Çevrilemeyen metin orijinal haliyle gösterilir.
+  function dTr(e) { return e ? (e.descriptionTr || e.description) : ''; }
+  function xTr(e) { return e ? (e.detailTr || e.detail) : ''; }
   function sig(r) { return r && r.last ? r.last.time + '|' + r.last.description : ''; }
 
   // Yeni sorgu: kayıt en üste taşınır. Daha önce varsa "yeni hareket" işareti sıfırlanır.
@@ -524,6 +532,20 @@
       body.appendChild(el('p', 'stats-note', 'İş günü hesabı: hafta sonları sayılmaz, resmi tatiller ayrıca düşülmez.'));
     }
 
+    if (r.last) {
+      var last = el('div', 'last');
+      last.appendChild(el('div', 'label', 'Son güncelleme: ne demiş?'));
+      last.appendChild(el('div', 'lastmsg', dTr(r.last)));
+      var loc = r.last.location ? ' · ' + r.last.location : '';
+      last.appendChild(el('div', 'meta', when(r.last.time) + loc));
+      if (xTr(r.last)) last.appendChild(el('div', 'lastdetail', xTr(r.last)));
+      var orig = [];
+      if (r.last.descriptionTr && r.last.descriptionTr !== r.last.description) orig.push(r.last.description);
+      if (r.last.detailTr && r.last.detail && r.last.detailTr !== r.last.detail) orig.push(r.last.detail);
+      if (orig.length) last.appendChild(el('div', 'orig', 'Orijinal: ' + orig.join(' ')));
+      body.appendChild(last);
+    }
+
     if (an.points.length) {
       var ul = el('ul', 'points');
       an.points.forEach(function (p) {
@@ -536,19 +558,6 @@
       body.appendChild(ul);
     }
 
-    if (r.last) {
-      var last = el('div', 'last');
-      last.appendChild(el('div', 'label', 'Son hareket'));
-      last.appendChild(el('strong', null, r.last.description));
-      last.appendChild(document.createElement('br'));
-      var loc = r.last.location ? ' · ' + r.last.location : '';
-      last.appendChild(el('span', 'meta', when(r.last.time) + loc));
-      if (r.last.detail) {
-        last.appendChild(document.createElement('br'));
-        last.appendChild(el('span', 'meta', r.last.detail));
-      }
-      body.appendChild(last);
-    }
 
     body.appendChild(el('h2', 'sec', 'Gönderi özeti'));
     var dl = el('dl');
@@ -618,7 +627,8 @@
       var ol = el('ol');
       r.events.forEach(function (e) {
         var li = el('li', 'ev');
-        li.appendChild(el('div', null, e.description));
+        li.appendChild(el('div', null, dTr(e)));
+        if (xTr(e)) li.appendChild(el('div', 't', xTr(e)));
         li.appendChild(el('div', 't', when(e.time) + (e.location ? ' · ' + e.location : '')));
         ol.appendChild(li);
       });
@@ -739,7 +749,7 @@
       }
       var bits = [];
       if (r.localCarrier) bits.push(r.localCarrier);
-      if (r.last) bits.push(r.last.description);
+      if (r.last) bits.push(dTr(r.last));
       bits.push('Son kontrol: ' + when(e.checkedAt));
       main.appendChild(el('span', 'h-meta', bits.join(' · ')));
       main.addEventListener('click', function () { showEntry(e.key); });
@@ -767,7 +777,7 @@
       var an = r.analysis;
       var lines = [(r.packageNumber || r.id) + ': ' + liveHeadline(r)];
       if (r.last) {
-        lines.push('  Son hareket: ' + r.last.description + ' — ' + when(r.last.time) +
+        lines.push('  Son hareket: ' + dTr(r.last) + ' — ' + when(r.last.time) +
           (r.last.location ? ' — ' + r.last.location : ''));
         lines.push('  ' + (r.delivered ? 'Teslim' : 'Son güncelleme') + ': ' +
           agoText(businessDaysSince(r.last.time)));

@@ -38,7 +38,7 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(an.flags.overdue, true);
   assert.equal(an.overview.origin, 'East Rutherford, NJ');
   assert.equal(an.overview.dutyPaid, true);
-  assert.ok(an.points.some((x) => x.level === 'ok' && x.text.startsWith('Gümrük: Cleared customs')));
+  assert.ok(an.points.some((x) => x.level === 'ok' && x.text.startsWith('Gümrük: Gümrükten geçti.')));
   assert.ok(an.points.some((x) => x.text.includes('1 kez denendi')));
 
   // Yapay senaryolar (iade ve teslim örneklerini henüz gerçek yanıtta görmedik)
@@ -148,6 +148,18 @@ const { parseInput, handleLookup } = require('../lib/apc');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
   assert.match(asMiss.error, /APC'de ve Asendia'da/);
+
+  // Türkçe çeviri
+  assert.equal(a.last.descriptionTr, 'Gecikme var.');
+  assert.match(a.last.detailTr, /24 saatten uzun süredir hareket etmedi/);
+  assert.equal(as.events.find((e) => e.description === 'Flight Departed').descriptionTr, 'Uçuş kalktı.');
+  assert.equal(as.events[as.events.length - 1].descriptionTr, 'Gönderi bilgisi alındı (kargo henüz teslim alınmamış olabilir).');
+  assert.ok(a.analysis.points.some((x) => x.text.startsWith('Gümrük: Gümrükten geçti.')));
+  const { translate } = require('../lib/translate');
+  assert.equal(translate('Delivered.'), 'Teslim edildi.');
+  assert.equal(translate('Out for delivery.'), 'Dağıtıma çıktı.');
+  assert.equal(translate('Bilinmeyen garip bir mesaj'), null);
+  assert.equal(translate(''), null);
 
   // Boş girdi
   assert.equal((await handleLookup('')).status, 400);

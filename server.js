@@ -43,6 +43,12 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, fs.readFileSync(INDEX), 'text/html; charset=utf-8');
   }
 
+  const logo = req.method === 'GET' && pathname.match(/^\/logos\/(apc|asendia)\.png$/);
+  if (logo) {
+    const f = path.join(__dirname, 'public', 'logos', logo[1] + '.png');
+    return send(res, 200, fs.readFileSync(f), 'image/png');
+  }
+
   if (req.method === 'GET' && pathname === '/healthz') {
     return send(res, 200, { ok: true });
   }

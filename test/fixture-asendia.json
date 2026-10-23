@@ -1,0 +1,167 @@
+{
+  "trackingBrandedSummary": {
+    "destinationCountry": "Portugal",
+    "destinationCountryIso2": "PT",
+    "lastMileMessage": "",
+    "finalMileTrackingLink": "https://tracking.dpd.pt/track-and-trace",
+    "trackingNumberVendor": "29130001741434",
+    "trackingNumberCustomer": "897870677277376512",
+    "trackingNumberCustomerCarrierOriginal": "AS015144682US",
+    "service": "e-PAQ Select DDP",
+    "weight": "3.10 lb",
+    "trackingProgress": {
+      "total": 5,
+      "completed": 4
+    },
+    "consolidatedPackages": null
+  },
+  "trackingBrandedDetail": [
+    {
+      "eventCode": "HUS0",
+      "eventDescription": "In Transit",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": "Oirschot",
+        "province": null,
+        "postalCode": null,
+        "countryIso2": "NL",
+        "countryName": "Netherlands"
+      },
+      "eventOn": "2026-10-21T14:43:35+00:00",
+      "eventSource": "DPDTTEventsAPI"
+    },
+    {
+      "eventCode": "DIT",
+      "eventDescription": "Delayed In Transit",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": "AMSTERDAM",
+        "province": null,
+        "postalCode": null,
+        "countryIso2": "NL",
+        "countryName": "Netherlands"
+      },
+      "eventOn": "2026-10-17T12:31:00+00:00",
+      "eventSource": "A1 Manual Entry"
+    },
+    {
+      "eventCode": "me4",
+      "eventDescription": "Flight Arrived",
+      "eventLocationDetails": {
+        "addressLine1": "AMSTERDAM INTERNATIONAL MAIL CENT",
+        "city": "AMSTERDAM",
+        "province": null,
+        "postalCode": null,
+        "countryIso2": "NL",
+        "countryName": "Netherlands"
+      },
+      "eventOn": "2026-10-16T18:37:00+00:00",
+      "eventSource": "A1 Manual Entry"
+    },
+    {
+      "eventCode": "me3",
+      "eventDescription": "Flight Departed",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": null,
+        "province": "NY",
+        "postalCode": null,
+        "countryIso2": "US",
+        "countryName": "United States"
+      },
+      "eventOn": "2026-10-15T18:35:00+00:00",
+      "eventSource": "A1 Manual Entry"
+    },
+    {
+      "eventCode": "me4",
+      "eventDescription": "Flight Arrived",
+      "eventLocationDetails": {
+        "addressLine1": "AMSTERDAM INTERNATIONAL MAIL CENT",
+        "city": "AMSTERDAM",
+        "province": null,
+        "postalCode": null,
+        "countryIso2": "NL",
+        "countryName": "Netherlands"
+      },
+      "eventOn": "2026-10-15T18:29:00+00:00",
+      "eventSource": "A1 Manual Entry"
+    },
+    {
+      "eventCode": "2.2",
+      "eventDescription": "Dispatched by Asendia",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": "HAUPPAUGE",
+        "province": "NY",
+        "postalCode": "11788",
+        "countryIso2": "US",
+        "countryName": "United States"
+      },
+      "eventOn": "2026-10-15T13:30:51.740631+00:00",
+      "eventSource": "A1 Manifested Data"
+    },
+    {
+      "eventCode": "2.1",
+      "eventDescription": "Sorted by Asendia",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": "HAUPPAUGE",
+        "province": "NY",
+        "postalCode": "11788",
+        "countryIso2": "US",
+        "countryName": "United States"
+      },
+      "eventOn": "2026-10-15T01:26:28.446026+00:00",
+      "eventSource": "A1 Sorted Data"
+    },
+    {
+      "eventCode": "me3",
+      "eventDescription": "Flight Departed",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": null,
+        "province": "NY",
+        "postalCode": null,
+        "countryIso2": "US",
+        "countryName": "United States"
+      },
+      "eventOn": "2026-10-14T18:28:00+00:00",
+      "eventSource": "A1 Manual Entry"
+    },
+    {
+      "eventCode": "2",
+      "eventDescription": "Processed by Asendia",
+      "eventLocationDetails": {
+        "addressLine1": null,
+        "city": "HAUPPAUGE",
+        "province": "NY",
+        "postalCode": "11788",
+        "countryIso2": "US",
+        "countryName": "United States"
+      },
+      "eventOn": "2026-10-14T16:41:01.416305+00:00",
+      "eventSource": "A1 Processed Data"
+    },
+    {
+      "eventCode": "1",
+      "eventDescription": "Shipment Information Received",
+      "eventLocationDetails": {
+        "addressLine1": "",
+        "city": null,
+        "province": null,
+        "postalCode": null,
+        "countryIso2": null,
+        "countryName": null
+      },
+      "eventOn": "2026-10-13T15:37:32.52+00:00",
+      "eventSource": "A1 Imported Data"
+    }
+  ],
+  "trackingServiceMessage": "",
+  "transitTimesMessage": "",
+  "footerText": null,
+  "responseStatus": {
+    "responseStatusCode": 200,
+    "responseStatusMessage": ""
+  }
+}

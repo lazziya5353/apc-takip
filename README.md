@@ -1,4 +1,4 @@
-# APC ve Asendia Kargo Takip
+# APC & Asendia & Sagawa Kargo Takip
 
 APC linkini veya takip numarasını yapıştır, son durumu ve local carrier bilgisini getirir.
 Bağımlılık yok, Node 18 veya üstü yeterli.
@@ -30,6 +30,13 @@ APC ile aynı analizden geçer (gecikme, iş günü, iade). Asendia tahmini tesl
 bu yüzden gecikme "gecikme bildirimi" ve iş günü kuralına dayanır. İstek içindeki `trackingKey`
 sayfaya gömülü herkese açık anahtardır. Değişirse Netlify'da `ASENDIA_KEY` ortam değişkenini
 güncelle.
+
+## Sagawa
+
+`tracking.sagawa-sgx.com` linki ya da 12 haneli AWB numarası Sagawa'dan sorgulanır. Sagawa'nın
+ayrı bir API'si yok, sonuç sayfanın HTML'inde geliyor; `lib/sagawa.js` o tabloyu ayrıştırır.
+Tablodaki saatler yerel saattir, hareketin ülkesine göre saat dilimi seçilir. 12 haneli numara
+APC'nin yerel carrier numarası da olabilir, bu yüzden APC ve Sagawa sırayla denenir.
 
 ## Durum özeti
 

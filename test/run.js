@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 process.env.APC_BASE = 'http://127.0.0.1:4010';
 process.env.ASENDIA_BASE = 'http://127.0.0.1:4010';
+process.env.SAGAWA_BASE = 'http://127.0.0.1:4010';
 const { parseInput, handleLookup } = require('../lib/apc');
 
 (async () => {
@@ -147,7 +148,30 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(as.events.find((e) => e.description === 'Delayed In Transit').category, 'Delayed');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
-  assert.match(asMiss.error, /APC'de ve Asendia'da/);
+  assert.match(asMiss.error, /APC, Asendia ve Sagawa/);
+
+  // Sagawa: link ya da 12 haneli numara
+  const ps = parseInput('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=564652084194');
+  assert.deepEqual(ps.ids, ['564652084194']);
+  assert.equal(ps.hints['564652084194'], 'sagawa');
+  const sg = (await handleLookup('564652084194')).body.results[0]; // sadece numara: APC 404 -> Sagawa
+  assert.equal(sg.ok, true);
+  assert.equal(sg.provider, 'sagawa');
+  assert.equal(sg.delivered, true);
+  assert.equal(sg.analysis.verdict, 'delivered');
+  assert.equal(sg.events.length, 11);
+  assert.equal(sg.last.time, '2026-10-17T01:09:00.000Z'); // 10:09 Tokyo saati
+  assert.equal(sg.events[sg.events.length - 1].time, '2026-10-09T14:56:00.000Z'); // 10:56 New York (EDT)
+  assert.equal(sg.analysis.flags.attempts, 2);
+  assert.equal(sg.localCarrier, 'Sagawa Express');
+  assert.equal(sg.localCarrierUrl, 'http://k2k.sagawa-exp.co.jp/cgi-bin/mall.mmcgi?oku01=564652084194');
+  assert.equal(sg.ref2, '6T3DHRZCY70G');
+  assert.equal(sg.last.descriptionTr, 'Teslim edildi (imza/kaşe ile).');
+  const sgLink = (await handleLookup('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?awb=564652084194')).body.results[0];
+  assert.equal(sgLink.provider, 'sagawa');
+  const none = (await handleLookup('999999999999')).body.results[0];
+  assert.equal(none.ok, false);
+  assert.match(none.error, /APC, Asendia ve Sagawa/);
 
   // Türkçe çeviri
   assert.equal(a.last.descriptionTr, 'Gecikme var.');

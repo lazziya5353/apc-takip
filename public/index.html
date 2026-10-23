@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APC ve Asendia Kargo Takip</title>
+<title>APC &amp; Asendia &amp; Sagawa Kargo Takip</title>
 <style>
   :root {
     --bg: #e4e1d6; --card: #f8f6f0; --text: #23222b; --muted: #5e5c68; --line: #d3cfc2; --field: #efece3;
@@ -38,7 +38,13 @@
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
-  .hero { position: relative; background: linear-gradient(135deg, var(--hero-from), var(--hero-to)); color: #fff; padding: 28px 0 64px; }
+  .hero { position: relative; background: linear-gradient(135deg, var(--hero-from), var(--hero-to)); color: #fff; padding: 30px 0 72px; }
+  .hero { text-align: center; }
+  .hero .logos { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .hero .chip { display: grid; place-items: center; height: 46px; padding: 0 14px; border-radius: 10px;
+                background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .22); }
+  .hero .chip img[alt="Asendia"] { height: 34px; border-radius: 4px; }
+  .hero .chip img { display: block; height: 28px; width: auto; max-width: 110px; object-fit: contain; }
   .hero h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -.01em; }
   .hero p { margin: 0; opacity: .85; }
   .grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; margin-top: -40px; padding-bottom: 64px; align-items: start; }
@@ -67,6 +73,11 @@
   a.btn.open:hover { filter: brightness(1.12); }
   a.btn.open.asendia { background: #f2c200; border-color: #d4a900; color: #1b1b1b; box-shadow: 0 2px 6px rgba(160, 125, 0, .3); }
   a.btn.open.asendia:hover { filter: brightness(1.05); }
+  a.btn.open.sagawa { background: #c8102e; border-color: #a50d26; color: #fff; box-shadow: 0 2px 6px rgba(160, 15, 40, .3); }
+  a.btn.open.sagawa:hover { filter: brightness(1.1); }
+  .provtag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; letter-spacing: .06em;
+             text-transform: uppercase; background: #c8102e; color: #fff; flex: none; }
+  .provtag.sm { padding: 1px 7px; font-size: 11px; }
   .themebtn { position: absolute; top: 16px; right: 16px; padding: 5px 12px; font-size: 13px; border-radius: 999px;
               background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.35); }
   .themebtn:hover:not(:disabled) { background: rgba(255,255,255,.26); border-color: #fff; }
@@ -93,6 +104,7 @@
   .body { padding: 16px 18px 18px; }
   .head { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
   .logo { display: block; height: 34px; width: auto; max-width: 90px; object-fit: contain; border-radius: 4px; flex: none; }
+  .h-top .pkg { font-size: 14px; word-break: normal; overflow-wrap: anywhere; }
   .head .pkg, .h-top .pkg { flex: 1; min-width: 0; }
   .logo.sm { height: 24px; max-width: 64px; }
   .pkg { font: 700 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
@@ -159,8 +171,13 @@
 <header class="hero">
   <button type="button" class="themebtn" id="themeBtn" aria-label="Temayı değiştir">Tema</button>
   <div class="wrap">
-    <h1>APC ve Asendia Kargo Takip</h1>
-    <p>APC ya da Asendia linkini veya takip numarasını yapıştır. Hangisi olduğunu kendim anlarım, durum özetini ve local carrier bilgisini getiririm.</p>
+    <h1>APC &amp; ASENDİA &amp; SAGAWA KARGO TAKİP</h1>
+    <p>APC, Asendia ya da Sagawa linkini veya takip numarasını yapıştır. Hangisi olduğunu kendim anlarım.</p>
+    <div class="logos" aria-hidden="true">
+      <span class="chip"><img src="/logos/apc.png" alt="APC"></span>
+      <span class="chip"><img src="/logos/asendia.png" alt="Asendia"></span>
+      <span class="chip"><img src="/logos/sagawa.png" alt="Sagawa"></span>
+    </div>
   </div>
 </header>
 
@@ -338,11 +355,15 @@
   }
   // Kargonun sistemine göre logo (public/logos). Bilinmiyorsa logo gösterilmez.
   function logoFor(r, small) {
-    var f = r.provider === 'asendia' ? 'asendia.png' : (r.provider === 'apc' ? 'apc.png' : null);
-    if (!f) return null;
+    var f = r.provider === 'asendia' ? 'asendia.png' : (r.provider === 'apc' ? 'apc.png' : (r.provider === 'sagawa' ? 'sagawa.png' : null));
+    if (!f) {
+      // Logosu olmayan sistemler (Sagawa vb.) için yazılı etiket
+      if (!r.providerName) return null;
+      return el('span', 'provtag' + (small ? ' sm' : ''), r.providerName);
+    }
     var img = el('img', 'logo' + (small ? ' sm' : ''));
     img.src = '/logos/' + f;
-    img.alt = r.provider === 'asendia' ? 'Asendia' : 'APC';
+    img.alt = r.providerName || (r.provider === 'asendia' ? 'Asendia' : 'APC');
     img.loading = 'lazy';
     return img;
   }
@@ -353,11 +374,14 @@
     if (r.provider === 'asendia') {
       url = 'https://a1.asendiausa.com/tracking/?trackingnumber=' + encodeURIComponent(r.id);
       label = "Asendia'da aç ↗";
+    } else if (r.provider === 'sagawa') {
+      url = 'https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=' + encodeURIComponent(r.id);
+      label = "Sagawa'da aç ↗";
     } else {
       url = 'https://tracking.apc-pli.com/' + encodeURIComponent(r.ref2 || r.id);
       label = "APC'de aç ↗";
     }
-    var a = el('a', 'btn open' + (r.provider === 'asendia' ? ' asendia' : '') + (mini ? ' mini' : ''), label);
+    var a = el('a', 'btn open' + (r.provider === 'asendia' ? ' asendia' : (r.provider === 'sagawa' ? ' sagawa' : '')) + (mini ? ' mini' : ''), label);
     a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
     return a;
   }
@@ -617,7 +641,7 @@
       }
       row('Local carrier', span);
     }
-    row(r.provider === 'asendia' ? 'Müşteri referans no' : 'APC referans no', r.ref2);
+    row(r.provider === 'asendia' ? 'Müşteri referans no' : (r.provider === 'sagawa' ? 'Referans no (REF#)' : 'APC referans no'), r.ref2);
     row('Referans 1', r.ref1);
     body.appendChild(dl);
 

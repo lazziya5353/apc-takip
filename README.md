@@ -33,6 +33,15 @@ Her kargo için APC'nin hareket geçmişinden otomatik özet çıkar (`analyze` 
 İade tespiti, iade olaylarının APC'deki tam metni görülmeden yazıldı. Gerçek bir iade kaydı
 gördüğünde `RETURN_RE` ifadesini ona göre güncellemek gerekebilir.
 
+## Local carrier linki
+
+Local carrier satırında carrier adı ve local takip numarası görünür. Numaraya tıklayınca carrier
+sayfası açılır, "Kopyala" ile numara panoya alınır. Numaranın linke otomatik eklendiği carrier'lar
+`lib/apc.js` içindeki `CARRIER_LINKS` listesinde (şu an Royal Mail, UPS). Listede olmayan
+carrier'larda APC'nin verdiği genel carrier sayfası açılır, numarayı sen yapıştırırsın.
+Yeni carrier eklemek için listeye `{ match: /ad/i, url: '...{n}...' }` satırı yeter.
+UPS kalıbı doğrulanmadı, çalışmazsa oradaki adresi güncelle.
+
 ## Nasıl çalışıyor
 
 APC'nin takip sayfası `GET https://tracking.apc-pli.com/api/track?id=<numara>` çağırıyor.

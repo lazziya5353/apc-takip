@@ -55,6 +55,8 @@
   .last { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
   .label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
   .meta { color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  button.mini { padding: 1px 8px; font-size: 12px; border-radius: 6px; margin-left: 2px; }
   h2 { margin: 14px 0 0; font-size: 13px; font-weight: 600; color: var(--muted);
        text-transform: uppercase; letter-spacing: .04em; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 0; }
@@ -207,15 +209,44 @@
     row('Servis', r.service);
     row('Vergi / gümrük ücreti', ov.dutyPaid === null ? null : (ov.dutyPaid ? 'Ödenmiş (DDP)' : 'Alıcıdan tahsil edilebilir'));
 
-    if (r.localCarrier) {
+    if (r.localCarrier || r.localTrackingNumber) {
       var span = el('span');
-      span.appendChild(document.createTextNode(r.localCarrier));
+      if (r.localCarrier) span.appendChild(document.createTextNode(r.localCarrier));
+      var num = r.localTrackingNumber;
       var u = safeUrl(r.localCarrierUrl);
-      if (u) {
+      if (num) {
+        if (r.localCarrier) span.appendChild(document.createTextNode(' · '));
+        if (u) {
+          var a = el('a', 'mono', num);
+          a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          a.title = r.localCarrierPrefilled
+            ? 'Carrier sayfası bu numarayla açılır'
+            : 'Carrier sayfası açılır, numarayı kopyalayıp oraya yapıştır';
+          span.appendChild(a);
+        } else {
+          span.appendChild(el('span', 'mono', num));
+        }
+        span.appendChild(document.createTextNode(' '));
+        var cp = el('button', 'mini', 'Kopyala');
+        cp.type = 'button';
+        cp.addEventListener('click', async function () {
+          try {
+            await navigator.clipboard.writeText(num);
+            cp.textContent = 'Kopyalandı';
+            setTimeout(function () { cp.textContent = 'Kopyala'; }, 1500);
+          } catch (e) { cp.textContent = 'Kopyalanamadı'; }
+        });
+        span.appendChild(cp);
+        if (u && !r.localCarrierPrefilled) {
+          span.appendChild(document.createElement('br'));
+          span.appendChild(el('span', 'meta',
+            'Bu carrier için numara linke otomatik eklenemiyor, sayfa açılınca numarayı yapıştır.'));
+        }
+      } else if (u) {
         span.appendChild(document.createTextNode(' · '));
-        var a = el('a', null, 'carrier sitesinde aç');
-        a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
-        span.appendChild(a);
+        var a2 = el('a', null, 'carrier sitesinde aç');
+        a2.href = u; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
+        span.appendChild(a2);
       }
       row('Local carrier', span);
     }
@@ -248,7 +279,10 @@
         lines.push('  Son hareket: ' + r.last.description + ' — ' + when(r.last.time) +
           (r.last.location ? ' — ' + r.last.location : ''));
       }
-      if (r.localCarrier) lines.push('  Local carrier: ' + r.localCarrier);
+      if (r.localCarrier) {
+        lines.push('  Local carrier: ' + r.localCarrier +
+          (r.localTrackingNumber ? ' (' + r.localTrackingNumber + ')' : ''));
+      }
       an.points.forEach(function (p) {
         if (p.level === 'bad' || p.level === 'warn') lines.push('  - ' + p.text);
       });

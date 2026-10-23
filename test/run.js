@@ -72,6 +72,18 @@ const { parseInput, handleLookup } = require('../lib/apc');
   const empty = mk([]);
   assert.equal(empty.analysis.verdict, 'unknown');
 
+  // Local takip no ve carrier linki
+  const { carrierLink } = require('../lib/apc');
+  assert.equal(a.localTrackingNumber, 'HX61222041201040241');
+  assert.equal(a.localCarrierPrefilled, false); // Hound Express için numaralı kalıp bilmiyoruz
+  assert.equal(a.localCarrierUrl, 'https://www.hound-express.com/tracking-en.html');
+  const rm = carrierLink('Royal Mail', 'GV370207019GB', 'https://www.royalmail.com/');
+  assert.equal(rm.url, 'https://www.royalmail.com/track-your-item#/tracking-results/GV370207019GB');
+  assert.equal(rm.prefilled, true);
+  const unk = carrierLink('Hermes', 'H1034370003838201527', 'https://example.com/track');
+  assert.deepEqual(unk, { url: 'https://example.com/track', prefilled: false });
+  assert.equal(carrierLink('Royal Mail', 'A/B?x', null).url.includes('A%2FB%3Fx'), true);
+
   // Boş girdi
   assert.equal((await handleLookup('')).status, 400);
   console.log('Tüm testler geçti');

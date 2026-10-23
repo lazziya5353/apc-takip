@@ -147,7 +147,7 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(as.events.find((e) => e.description === 'Delayed In Transit').category, 'Delayed');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
-  assert.match(asMiss.error, /APC ve Asendia/);
+  assert.match(asMiss.error, /APC'de ve Asendia'da/);
 
   // Boş girdi
   assert.equal((await handleLookup('')).status, 400);

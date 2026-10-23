@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APC Kargo Takip</title>
+<style>
+  :root {
+    --bg: #f4f5f8; --card: #ffffff; --text: #1b1d2a; --muted: #636880; --line: #e2e4ec;
+    --accent: #2d2f7a; --accent-text: #ffffff;
+    --ok: #17794a; --ok-bg: #e3f5ec; --warn: #9a5b00; --warn-bg: #fdf0d9;
+    --bad: #b3261e; --bad-bg: #fbe4e2; --info: #1d5fa8; --info-bg: #e2eefb; --neutral-bg: #eceef4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12131a; --card: #1c1e29; --text: #eceef6; --muted: #9a9fb8; --line: #2c2f3f;
+      --accent: #8c90ff; --accent-text: #12131a;
+      --ok: #5fd39a; --ok-bg: #16342a; --warn: #f2b84b; --warn-bg: #3a2d12;
+      --bad: #ff8a80; --bad-bg: #3d1b19; --info: #7db6f5; --info-bg: #17293f; --neutral-bg: #262938;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  textarea { width: 100%; min-height: 110px; resize: vertical; padding: 12px; border-radius: 8px;
+             border: 1px solid var(--line); background: var(--bg); color: var(--text);
+             font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  button { font: inherit; padding: 9px 18px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .6; cursor: default; }
+  .hint { color: var(--muted); font-size: 13px; }
+  #notice { margin: 16px 0 0; color: var(--muted); }
+  #notice.err { color: var(--bad); }
+  .result { margin-top: 16px; }
+  .head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .pkg { font: 600 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .b-ok { background: var(--ok-bg); color: var(--ok); }
+  .b-warn { background: var(--warn-bg); color: var(--warn); }
+  .b-bad { background: var(--bad-bg); color: var(--bad); }
+  .b-info { background: var(--info-bg); color: var(--info); }
+  .b-neutral { background: var(--neutral-bg); color: var(--muted); }
+  .last { margin: 12px 0 0; }
+  .last strong { font-size: 17px; }
+  .meta { color: var(--muted); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-word; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  ol { list-style: none; margin: 10px 0 0; padding: 0; }
+  li.ev { padding: 8px 0 8px 14px; border-left: 2px solid var(--line); }
+  li.ev:first-child { border-left-color: var(--accent); }
+  .ev .t { color: var(--muted); font-size: 13px; }
+  .actions { margin-top: 16px; display: none; }
+  @media (max-width: 520px) { dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>APC Kargo Takip</h1>
+  <p class="sub">APC linkini ya da takip numarasını yapıştır, son durumu ve local carrier bilgisini getireyim.</p>
+
+  <div class="panel">
+    <label for="input" class="hint">Her satıra bir link veya numara (en fazla 50)</label>
+    <textarea id="input" spellcheck="false" placeholder="https://tracking.apc-pli.com/18391P1008260002682920&#10;18391P1012260002728838"></textarea>
+    <div class="row">
+      <button id="go" class="primary" type="button">Sorgula</button>
+      <button id="clear" type="button">Temizle</button>
+      <span class="hint">Ctrl + Enter ile de sorgulayabilirsin.</span>
+    </div>
+  </div>
+
+  <p id="notice" role="status" aria-live="polite"></p>
+  <div id="results"></div>
+
+  <div class="actions" id="actions">
+    <button id="copy" type="button">Özeti kopyala</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul'
+  });
+  var fmtDay = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeZone: 'Europe/Istanbul' });
+  var lastResults = [];
+
+  function when(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    return isNaN(d) ? '-' : fmt.format(d);
+  }
+  function day(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    return isNaN(d) ? '-' : fmtDay.format(d);
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+  function safeUrl(u) {
+    try {
+      var p = new URL(u);
+      return p.protocol === 'https:' || p.protocol === 'http:' ? p.href : null;
+    } catch (e) { return null; }
+  }
+
+  // Durumu Türkçe etiket ve renk sınıfına çevirir.
+  function status(r) {
+    if (r.delivered) return { text: 'Teslim edildi', cls: 'b-ok' };
+    var c = r.last ? r.last.category : '';
+    var map = {
+      'Out for Delivery': ['Dağıtımda', 'b-info'],
+      'Delivery Attempted': ['Teslimat denendi', 'b-warn'],
+      'Delayed': ['Gecikmeli', 'b-bad'],
+      'Exception': ['Sorun var', 'b-bad'],
+      'Customs': ['Gümrükte / geçti', 'b-info'],
+      'In Transit': ['Yolda', 'b-info'],
+      'Ready for Export': ['İhracata hazır', 'b-neutral'],
+      'Scanned at APC': ['APC\'de tarandı', 'b-neutral'],
+      'Data Received': ['Etiket oluşturuldu', 'b-neutral']
+    };
+    var m = map[c];
+    return m ? { text: m[0], cls: m[1] } : { text: c || 'Bilinmiyor', cls: 'b-neutral' };
+  }
+
+  function render(r) {
+    var card = el('section', 'panel result');
+
+    if (!r.ok) {
+      var h = el('div', 'head');
+      h.appendChild(el('span', 'pkg', r.id));
+      h.appendChild(el('span', 'badge b-bad', 'Sorgulanamadı'));
+      card.appendChild(h);
+      card.appendChild(el('p', 'last', r.error));
+      return card;
+    }
+
+    var st = status(r);
+    var head = el('div', 'head');
+    head.appendChild(el('span', 'pkg', r.packageNumber || r.id));
+    head.appendChild(el('span', 'badge ' + st.cls, st.text));
+    card.appendChild(head);
+
+    if (r.last) {
+      var last = el('p', 'last');
+      last.appendChild(el('strong', null, r.last.description));
+      last.appendChild(document.createElement('br'));
+      var loc = r.last.location ? ' · ' + r.last.location : '';
+      last.appendChild(el('span', 'meta', when(r.last.time) + loc));
+      card.appendChild(last);
+      if (r.last.detail) card.appendChild(el('p', 'meta', r.last.detail));
+      if (!r.delivered && r.hoursSinceLast !== null && r.hoursSinceLast >= 72) {
+        card.appendChild(el('p', 'meta',
+          'Son hareketten bu yana yaklaşık ' + Math.floor(r.hoursSinceLast / 24) + ' gün geçti.'));
+      }
+    }
+
+    var dl = el('dl');
+    function row(k, v) {
+      if (!v) return;
+      dl.appendChild(el('dt', null, k));
+      var dd = el('dd');
+      if (v instanceof Node) dd.appendChild(v); else dd.textContent = v;
+      dl.appendChild(dd);
+    }
+    var est = (r.estFrom && r.estTo) ? day(r.estFrom) + ' – ' + day(r.estTo) : null;
+    row('Tahmini teslimat', r.delivered ? null : est);
+
+    if (r.localCarrier) {
+      var span = el('span');
+      span.appendChild(document.createTextNode(r.localCarrier));
+      var u = safeUrl(r.localCarrierUrl);
+      if (u) {
+        span.appendChild(document.createTextNode(' · '));
+        var a = el('a', null, 'carrier sitesinde aç');
+        a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        span.appendChild(a);
+      }
+      row('Local carrier', span);
+    }
+    row('Servis', r.service);
+    row('Teslimat ülkesi / posta kodu', r.shipTo);
+    row('APC referans no', r.ref2);
+    row('Referans 1', r.ref1);
+    card.appendChild(dl);
+
+    if (r.events && r.events.length) {
+      var det = el('details');
+      det.appendChild(el('summary', null, 'Tüm hareketler (' + r.events.length + ')'));
+      var ol = el('ol');
+      r.events.forEach(function (e) {
+        var li = el('li', 'ev');
+        li.appendChild(el('div', null, e.description));
+        li.appendChild(el('div', 't', when(e.time) + (e.location ? ' · ' + e.location : '')));
+        ol.appendChild(li);
+      });
+      det.appendChild(ol);
+      card.appendChild(det);
+    }
+    return card;
+  }
+
+  function summaryText(results) {
+    return results.map(function (r) {
+      if (!r.ok) return r.id + ': sorgulanamadı (' + r.error + ')';
+      var s = status(r).text;
+      var l = r.last ? r.last.description + ' — ' + when(r.last.time) +
+        (r.last.location ? ' — ' + r.last.location : '') : '';
+      var c = r.localCarrier ? ' | Local carrier: ' + r.localCarrier : '';
+      return (r.packageNumber || r.id) + ': ' + s + (l ? ' | ' + l : '') + c;
+    }).join('\n');
+  }
+
+  async function run() {
+    var text = $('input').value.trim();
+    var notice = $('notice');
+    notice.className = '';
+    if (!text) { notice.textContent = 'Önce bir link veya numara yapıştır.'; notice.className = 'err'; return; }
+
+    $('go').disabled = true;
+    notice.textContent = 'Sorgulanıyor…';
+    $('results').replaceChildren();
+    $('actions').style.display = 'none';
+
+    try {
+      var res = await fetch('/api/lookup', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: text })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        notice.textContent = data.error || 'Bir hata oluştu.';
+        notice.className = 'err';
+        return;
+      }
+      lastResults = data.results;
+      var parts = [data.results.length + ' kargo sorgulandı · ' + when(data.checkedAt)];
+      if (data.invalid && data.invalid.length) parts.push(data.invalid.length + ' satır numara olarak tanınmadı');
+      if (data.truncated) parts.push('ilk ' + data.maxIds + ' numara alındı');
+      notice.textContent = parts.join(' · ');
+      var frag = document.createDocumentFragment();
+      data.results.forEach(function (r) { frag.appendChild(render(r)); });
+      $('results').appendChild(frag);
+      $('actions').style.display = 'block';
+    } catch (e) {
+      notice.textContent = 'Sunucuya ulaşılamadı. Uygulama çalışıyor mu?';
+      notice.className = 'err';
+    } finally {
+      $('go').disabled = false;
+    }
+  }
+
+  $('go').addEventListener('click', run);
+  $('clear').addEventListener('click', function () {
+    $('input').value = ''; $('results').replaceChildren(); $('notice').textContent = '';
+    $('actions').style.display = 'none'; $('input').focus();
+  });
+  $('input').addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') run();
+  });
+  $('copy').addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText(summaryText(lastResults));
+      $('copy').textContent = 'Kopyalandı';
+      setTimeout(function () { $('copy').textContent = 'Özeti kopyala'; }, 1500);
+    } catch (e) { $('notice').textContent = 'Kopyalanamadı.'; $('notice').className = 'err'; }
+  });
+})();
+</script>
+</body>
+</html>

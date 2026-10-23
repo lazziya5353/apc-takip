@@ -72,6 +72,16 @@ const { parseInput, handleLookup } = require('../lib/apc');
   const empty = mk([]);
   assert.equal(empty.analysis.verdict, 'unknown');
 
+  // Gecikme günü
+  assert.ok(an.delayDays >= 1);
+  assert.ok(an.headline.startsWith('Gecikme var: tahmini teslimattan'));
+  const late5 = mk([ev(recent(5), 'In Transit', 'On the way.')], {
+    estimatingDeliveryTimeFrom: new Date(Date.now() - 7 * 864e5).toISOString(),
+    estimatingDeliveryTimeTo: new Date(Date.now() - 5 * 864e5).toISOString(),
+  });
+  assert.equal(late5.analysis.delayDays, 5);
+  assert.equal(fine.analysis.delayDays, null);
+
   // Local takip no ve carrier linki
   const { carrierLink } = require('../lib/apc');
   assert.equal(a.localTrackingNumber, 'HX61222041201040241');

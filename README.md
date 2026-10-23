@@ -33,6 +33,19 @@ Her kargo için APC'nin hareket geçmişinden otomatik özet çıkar (`analyze` 
 İade tespiti, iade olaylarının APC'deki tam metni görülmeden yazıldı. Gerçek bir iade kaydı
 gördüğünde `RETURN_RE` ifadesini ona göre güncellemek gerekebilir.
 
+## Geçmiş kontroller
+
+Sorguladığın her kargo sağdaki "Geçmiş kontroller" listesine düşer (en fazla 60). Liste o
+tarayıcının `localStorage` alanında durur: başka bilgisayarda ya da tarayıcıda görünmez, tarayıcı
+verisini silersen gider. Sunucuda hiçbir şey saklanmaz.
+
+- Kayda tıklayınca kargonun detayı açılır.
+- **Tekrar kontrol et:** o kargoyu yeniden sorgular. Son hareket değiştiyse "Yeni hareket" işareti çıkar.
+- **Hepsini tekrar kontrol et:** listedeki tüm kargoları tek seferde yeniler.
+- **Geçmişi temizle:** onay sorup listeyi siler.
+
+Gecikme günü: bugünün tarihi ile APC'nin tahmini teslimat tarihinin son günü arasındaki fark.
+
 ## Local carrier linki
 
 Local carrier satırında carrier adı ve local takip numarası görünür. Numaraya tıklayınca carrier

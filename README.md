@@ -21,6 +21,18 @@ Her satıra bir link veya numara. Şunlar kabul edilir:
 
 Aynı anda en fazla 50 numara sorgulanır.
 
+## Durum özeti
+
+Her kargo için APC'nin hareket geçmişinden otomatik özet çıkar (`analyze` fonksiyonu, `lib/apc.js`):
+
+- **Gecikme var:** son olay "Delayed" ise, tahmini teslimat tarihi geçtiyse ya da 3 günden uzun süredir hareket yoksa
+- **İade:** hareketlerde "returned to sender" gibi bir ifade varsa
+- **Teslimat denemesi**, **gümrük durumu**, **dağıtımda** bilgisi
+- **Gönderi özeti:** çıkış yeri, varış, yolda geçen süre, tahmini teslimat, servis, vergi durumu, local carrier
+
+İade tespiti, iade olaylarının APC'deki tam metni görülmeden yazıldı. Gerçek bir iade kaydı
+gördüğünde `RETURN_RE` ifadesini ona göre güncellemek gerekebilir.
+
 ## Nasıl çalışıyor
 
 APC'nin takip sayfası `GET https://tracking.apc-pli.com/api/track?id=<numara>` çağırıyor.

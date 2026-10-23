@@ -47,10 +47,17 @@
   .b-bad { background: var(--bad-bg); color: var(--bad); }
   .b-info { background: var(--info-bg); color: var(--info); }
   .b-neutral { background: var(--neutral-bg); color: var(--muted); }
-  .last { margin: 12px 0 0; }
-  .last strong { font-size: 17px; }
+  .headline { margin: 12px 0 0; font-size: 18px; font-weight: 700; }
+  ul.points { list-style: none; margin: 8px 0 0; padding: 0; }
+  ul.points li { display: flex; gap: 10px; padding: 3px 0; }
+  .mark { flex: none; width: 20px; height: 20px; border-radius: 50%; text-align: center;
+          font-size: 12px; line-height: 20px; font-weight: 700; margin-top: 2px; }
+  .last { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+  .label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
   .meta { color: var(--muted); }
-  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 14px 0 0; }
+  h2 { margin: 14px 0 0; font-size: 13px; font-weight: 600; color: var(--muted);
+       text-transform: uppercase; letter-spacing: .04em; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 0; }
   dt { color: var(--muted); }
   dd { margin: 0; word-break: break-word; }
   details { margin-top: 14px; }
@@ -66,7 +73,7 @@
 <body>
 <main>
   <h1>APC Kargo Takip</h1>
-  <p class="sub">APC linkini ya da takip numarasını yapıştır, son durumu ve local carrier bilgisini getireyim.</p>
+  <p class="sub">APC linkini ya da takip numarasını yapıştır, durum özetini ve local carrier bilgisini getireyim.</p>
 
   <div class="panel">
     <label for="input" class="hint">Her satıra bir link veya numara (en fazla 50)</label>
@@ -119,24 +126,21 @@
     } catch (e) { return null; }
   }
 
-  // Durumu Türkçe etiket ve renk sınıfına çevirir.
-  function status(r) {
-    if (r.delivered) return { text: 'Teslim edildi', cls: 'b-ok' };
-    var c = r.last ? r.last.category : '';
-    var map = {
-      'Out for Delivery': ['Dağıtımda', 'b-info'],
-      'Delivery Attempted': ['Teslimat denendi', 'b-warn'],
-      'Delayed': ['Gecikmeli', 'b-bad'],
-      'Exception': ['Sorun var', 'b-bad'],
-      'Customs': ['Gümrükte / geçti', 'b-info'],
-      'In Transit': ['Yolda', 'b-info'],
-      'Ready for Export': ['İhracata hazır', 'b-neutral'],
-      'Scanned at APC': ['APC\'de tarandı', 'b-neutral'],
-      'Data Received': ['Etiket oluşturuldu', 'b-neutral']
-    };
-    var m = map[c];
-    return m ? { text: m[0], cls: m[1] } : { text: c || 'Bilinmiyor', cls: 'b-neutral' };
-  }
+  var VERDICTS = {
+    delivered: ['Teslim edildi', 'b-ok'],
+    returned: ['İade', 'b-bad'],
+    delayed: ['Gecikme var', 'b-bad'],
+    attention: ['Dikkat', 'b-warn'],
+    ontrack: ['Yolunda', 'b-info'],
+    unknown: ['Bilinmiyor', 'b-neutral']
+  };
+  // Renk tek başına anlam taşımasın diye her seviyenin bir simgesi de var.
+  var MARKS = {
+    ok: ['✓', 'b-ok'],
+    info: ['i', 'b-info'],
+    warn: ['!', 'b-warn'],
+    bad: ['✕', 'b-bad']
+  };
 
   function render(r) {
     var card = el('section', 'panel result');
@@ -146,40 +150,62 @@
       h.appendChild(el('span', 'pkg', r.id));
       h.appendChild(el('span', 'badge b-bad', 'Sorgulanamadı'));
       card.appendChild(h);
-      card.appendChild(el('p', 'last', r.error));
+      card.appendChild(el('p', 'headline', r.error));
       return card;
     }
 
-    var st = status(r);
+    var an = r.analysis;
+    var v = VERDICTS[an.verdict] || VERDICTS.unknown;
+
     var head = el('div', 'head');
     head.appendChild(el('span', 'pkg', r.packageNumber || r.id));
-    head.appendChild(el('span', 'badge ' + st.cls, st.text));
+    head.appendChild(el('span', 'badge ' + v[1], v[0]));
     card.appendChild(head);
 
+    card.appendChild(el('p', 'headline', an.headline));
+
+    if (an.points.length) {
+      var ul = el('ul', 'points');
+      an.points.forEach(function (p) {
+        var li = el('li');
+        var m = MARKS[p.level] || MARKS.info;
+        li.appendChild(el('span', 'mark ' + m[1], m[0]));
+        li.appendChild(el('span', null, p.text));
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+    }
+
     if (r.last) {
-      var last = el('p', 'last');
+      var last = el('div', 'last');
+      last.appendChild(el('div', 'label', 'Son hareket'));
       last.appendChild(el('strong', null, r.last.description));
       last.appendChild(document.createElement('br'));
       var loc = r.last.location ? ' · ' + r.last.location : '';
       last.appendChild(el('span', 'meta', when(r.last.time) + loc));
-      card.appendChild(last);
-      if (r.last.detail) card.appendChild(el('p', 'meta', r.last.detail));
-      if (!r.delivered && r.hoursSinceLast !== null && r.hoursSinceLast >= 72) {
-        card.appendChild(el('p', 'meta',
-          'Son hareketten bu yana yaklaşık ' + Math.floor(r.hoursSinceLast / 24) + ' gün geçti.'));
+      if (r.last.detail) {
+        last.appendChild(document.createElement('br'));
+        last.appendChild(el('span', 'meta', r.last.detail));
       }
+      card.appendChild(last);
     }
 
+    card.appendChild(el('h2', null, 'Gönderi özeti'));
     var dl = el('dl');
-    function row(k, v) {
-      if (!v) return;
+    function row(k, val) {
+      if (val === null || val === undefined || val === '') return;
       dl.appendChild(el('dt', null, k));
       var dd = el('dd');
-      if (v instanceof Node) dd.appendChild(v); else dd.textContent = v;
+      if (val instanceof Node) dd.appendChild(val); else dd.textContent = val;
       dl.appendChild(dd);
     }
-    var est = (r.estFrom && r.estTo) ? day(r.estFrom) + ' – ' + day(r.estTo) : null;
-    row('Tahmini teslimat', r.delivered ? null : est);
+    var ov = an.overview;
+    row('Çıkış', ov.origin);
+    row('Varış', r.shipTo);
+    row('Yolda geçen süre', ov.daysInTransit === null ? null : ov.daysInTransit + ' gün');
+    if (!r.delivered && r.estFrom && r.estTo) row('Tahmini teslimat', day(r.estFrom) + ' – ' + day(r.estTo));
+    row('Servis', r.service);
+    row('Vergi / gümrük ücreti', ov.dutyPaid === null ? null : (ov.dutyPaid ? 'Ödenmiş (DDP)' : 'Alıcıdan tahsil edilebilir'));
 
     if (r.localCarrier) {
       var span = el('span');
@@ -193,8 +219,6 @@
       }
       row('Local carrier', span);
     }
-    row('Servis', r.service);
-    row('Teslimat ülkesi / posta kodu', r.shipTo);
     row('APC referans no', r.ref2);
     row('Referans 1', r.ref1);
     card.appendChild(dl);
@@ -218,12 +242,18 @@
   function summaryText(results) {
     return results.map(function (r) {
       if (!r.ok) return r.id + ': sorgulanamadı (' + r.error + ')';
-      var s = status(r).text;
-      var l = r.last ? r.last.description + ' — ' + when(r.last.time) +
-        (r.last.location ? ' — ' + r.last.location : '') : '';
-      var c = r.localCarrier ? ' | Local carrier: ' + r.localCarrier : '';
-      return (r.packageNumber || r.id) + ': ' + s + (l ? ' | ' + l : '') + c;
-    }).join('\n');
+      var an = r.analysis;
+      var lines = [(r.packageNumber || r.id) + ': ' + an.headline];
+      if (r.last) {
+        lines.push('  Son hareket: ' + r.last.description + ' — ' + when(r.last.time) +
+          (r.last.location ? ' — ' + r.last.location : ''));
+      }
+      if (r.localCarrier) lines.push('  Local carrier: ' + r.localCarrier);
+      an.points.forEach(function (p) {
+        if (p.level === 'bad' || p.level === 'warn') lines.push('  - ' + p.text);
+      });
+      return lines.join('\n');
+    }).join('\n\n');
   }
 
   async function run() {

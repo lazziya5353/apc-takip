@@ -29,6 +29,49 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(a.events.length, 17);
   assert.equal(b.ok, false);
 
+  // Gerçek yanıt: Delayed olayı en yeni, tahmini teslimat geçmiş, bir teslimat denemesi var
+  const an = a.analysis;
+  assert.equal(an.verdict, 'delayed');
+  assert.equal(an.flags.returned, false);
+  assert.equal(an.flags.attempts, 1);
+  assert.equal(an.flags.overdue, true);
+  assert.equal(an.overview.origin, 'East Rutherford, NJ');
+  assert.equal(an.overview.dutyPaid, true);
+  assert.ok(an.points.some((x) => x.level === 'ok' && x.text.startsWith('Gümrük: Cleared customs')));
+  assert.ok(an.points.some((x) => x.text.includes('1 kez denendi')));
+
+  // Yapay senaryolar (iade ve teslim örneklerini henüz gerçek yanıtta görmedik)
+  const { summarize } = require('../lib/apc');
+  const mk = (events, extra = {}) =>
+    summarize('X1234567', {
+      packageNumber: 'P1',
+      estimatingDeliveryTimeFrom: '2099-01-01T00:00:00Z',
+      estimatingDeliveryTimeTo: '2099-01-05T00:00:00Z',
+      events,
+      ...extra,
+    });
+  const ev = (iso, category, description) => ({
+    eventDateTimeISOFormat: iso, eventCategory: category, description, location: 'X', countryCode: 'XX',
+  });
+  const recent = (h) => new Date(Date.now() - h * 36e5).toISOString();
+
+  const returned = mk([ev(recent(5), 'In Transit', 'Returned to sender.'), ev(recent(50), 'In Transit', 'On the way.')]);
+  assert.equal(returned.analysis.verdict, 'returned');
+
+  const delivered = mk([ev(recent(5), 'Delivered', 'Delivered.'), ev(recent(50), 'In Transit', 'On the way.')], { hasArrived: true });
+  assert.equal(delivered.analysis.verdict, 'delivered');
+  assert.equal(delivered.delivered, true);
+
+  const fine = mk([ev(recent(5), 'In Transit', 'On the way.'), ev(recent(30), 'In Transit', 'On the way.')]);
+  assert.equal(fine.analysis.verdict, 'ontrack');
+
+  const stalled = mk([ev(recent(24 * 5), 'In Transit', 'On the way.')]);
+  assert.equal(stalled.analysis.verdict, 'delayed');
+  assert.equal(stalled.analysis.flags.stalled, true);
+
+  const empty = mk([]);
+  assert.equal(empty.analysis.verdict, 'unknown');
+
   // Boş girdi
   assert.equal((await handleLookup('')).status, 400);
   console.log('Tüm testler geçti');

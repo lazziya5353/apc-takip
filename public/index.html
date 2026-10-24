@@ -85,6 +85,7 @@
   button.mini { padding: 2px 10px; font-size: 13px; border-radius: 7px; }
   .hint { color: var(--muted); font-size: 13px; }
   #notice { margin: 14px 2px 0; color: var(--muted); min-height: 1.5em; }
+  #notice .notice-act { margin-left: 8px; font-weight: 700; border-color: var(--accent); color: var(--accent); background: var(--card); }
   #notice.err { color: var(--bad); font-weight: 600; }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .meta { color: var(--muted); }
@@ -133,6 +134,29 @@
   .last .lastdetail { margin-top: 6px; font-size: 15px; }
   .last .orig { margin-top: 6px; font-size: 12px; color: var(--muted); font-style: italic; }
   .last .lastmsg { font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .evwrap { position: relative; margin-top: 12px; }
+  .evwrap .sumbtn { position: absolute; top: -3px; right: 0; font-weight: 700; border-color: var(--accent); color: var(--accent); }
+  .journey { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: var(--field); border-left: 4px solid var(--accent); }
+  .journey .label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .journey ul { margin: 0; padding-left: 18px; }
+  .journey li { margin: 4px 0; }
+  .journey .orig { margin-top: 8px; font-size: 12px; color: var(--muted); font-style: italic; }
+  .asst { margin-bottom: 16px; }
+  .asst h2 { margin-bottom: 4px; }
+  .asst-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .asst-chips button { padding: 3px 10px; font-size: 13px; border-radius: 999px; }
+  #asstForm { display: flex; gap: 8px; }
+  #asstQ { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--field); color: var(--text); font: inherit; }
+  #asstQ:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #asstOut { margin-top: 12px; }
+  .a-q { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  .a-ans { font-weight: 700; margin-bottom: 8px; line-height: 1.35; }
+  .a-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .a-list li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; flex-wrap: wrap; }
+  .a-list .a-main { flex: 1; min-width: 0; }
+  .a-list .pkg { font-size: 13px; }
+  .a-list .a-sub { display: block; font-size: 12.5px; color: var(--muted); }
+  .a-note { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
   h2.sec { margin: 16px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 18px; margin: 8px 0 0; }
   dt { color: var(--muted); }
@@ -201,6 +225,16 @@
   </section>
 
   <aside class="col-side">
+    <div class="panel asst" id="asst">
+      <h2>Asistan</h2>
+      <p class="hint">Geçmiş kontrollerdeki kargolar hakkında sor: kaç tanesi gecikmede, hangileri teslim edildi gibi.</p>
+      <div class="asst-chips" id="asstChips"></div>
+      <form id="asstForm" autocomplete="off">
+        <input id="asstQ" type="text" placeholder="Örn: kaç kargo gecikmede?" maxlength="200" aria-label="Asistana soru sor">
+        <button type="submit" class="primary">Sor</button>
+      </form>
+      <div id="asstOut" role="status" aria-live="polite"></div>
+    </div>
     <div class="panel">
       <div class="hist-head">
         <h2>Geçmiş kontroller</h2>
@@ -252,10 +286,17 @@
       return p.protocol === 'https:' || p.protocol === 'http:' ? p.href : null;
     } catch (e) { return null; }
   }
-  function setNotice(text, isErr) {
+  // actions: [{label, onClick}] metnin yanında düğme olarak gösterilir (ör. "Hareketi gör").
+  function setNotice(text, isErr, actions) {
     var n = $('notice');
     n.textContent = text || '';
     n.className = isErr ? 'err' : '';
+    (actions || []).forEach(function (a) {
+      var b = el('button', 'mini notice-act', a.label);
+      b.type = 'button';
+      b.addEventListener('click', a.onClick);
+      n.appendChild(b);
+    });
   }
 
   var VERDICTS = {
@@ -389,6 +430,86 @@
   // Çeviri sunucudan gelir (descriptionTr/detailTr). Çevrilemeyen metin orijinal haliyle gösterilir.
   function dTr(e) { return e ? (e.descriptionTr || e.description) : ''; }
   function xTr(e) { return e ? (e.detailTr || e.detail) : ''; }
+
+  // ---------- Hareketleri özetle ----------
+  function bdBetween(aIso, bIso) {
+    var a = Date.parse(aIso), b = Date.parse(bIso);
+    if (isNaN(a) || isNaN(b)) return 0;
+    var start = Date.parse(ymd(a)), end = Date.parse(ymd(b));
+    if (end <= start) return 0;
+    var n = 0;
+    for (var t = start + 864e5, i = 0; t <= end && i < 4000; t += 864e5, i++) {
+      var dow = new Date(t).getUTCDay();
+      if (dow !== 0 && dow !== 6) n++;
+    }
+    return n;
+  }
+  function dayOnly(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeZone: 'Europe/Istanbul' }).format(d);
+  }
+  // Hareket listesini okuyup Türkçe kısa bir yolculuk özeti çıkarır (yapay zeka değil, kural tabanlı).
+  function journeySummary(r) {
+    var evs = (r.events || []).filter(function (e) { return e.time; }).slice().reverse(); // eskiden yeniye
+    var out = [];
+    if (!evs.length) return ['Özetlenecek hareket yok.'];
+    var first = evs[0], last = evs[evs.length - 1];
+    var endIso = r.delivered ? last.time : new Date().toISOString();
+    var totalDays = Math.max(0, Math.round((Date.parse(ymd(Date.parse(endIso))) - Date.parse(ymd(Date.parse(first.time)))) / 864e5));
+    out.push('Kayıtlar ' + dayOnly(first.time) + ' tarihinde "' + dTr(first).replace(/\.$/, '') + '"' +
+      (first.location ? ' (' + first.location + ')' : '') + ' ile başlıyor, toplam ' + evs.length + ' hareket var.' +
+      (r.delivered ? ' Teslimata kadar ' + totalDays + ' gün sürdü.' : ' Şu ana kadar ' + totalDays + ' gün geçti.'));
+
+    // Güzergah: art arda aynı yerleri teke indir
+    var route = [];
+    evs.forEach(function (e) {
+      var loc = (e.location || '').trim();
+      if (loc && route[route.length - 1] !== loc) route.push(loc);
+    });
+    if (route.length > 1) {
+      var shown = route.length > 8 ? route.slice(0, 3).concat(['…'], route.slice(-4)) : route;
+      out.push('Güzergah: ' + shown.join(' → ') + '.');
+    }
+
+    var isCat = function (e, re) { return re.test(e.category || '') || re.test(e.description || ''); };
+    var customs = evs.filter(function (e) { return isCat(e, /customs|clearance/i); });
+    if (customs.length) {
+      var c = customs[customs.length - 1];
+      out.push('Gümrük: son kayıt "' + dTr(c).replace(/\.$/, '') + '" (' + dayOnly(c.time) + ').');
+    }
+    var delays = evs.filter(function (e) { return /^delayed/i.test(e.category || '') || /delay/i.test(e.description || ''); });
+    if (delays.length) {
+      out.push('Gecikme bildirimi ' + delays.length + ' kez gelmiş, en son ' + dayOnly(delays[delays.length - 1].time) + '.');
+    }
+    var attempts = evs.filter(function (e) { return /attempt/i.test(e.category || '') || /absence/i.test(e.description || ''); });
+    if (attempts.length) {
+      out.push('Teslimat ' + attempts.length + ' kez denenmiş (' + attempts.map(function (e) { return dayOnly(e.time); }).join(', ') + ').');
+    }
+    var back = evs.filter(function (e) { return /return/i.test(e.category || '') || /return(ed)? to (the )?sender|return to origin/i.test(e.description || ''); });
+    if (back.length) {
+      out.push('İade kaydı var: ilk olarak ' + dayOnly(back[0].time) + ' tarihinde görülmüş.');
+    }
+
+    // En uzun bekleme (iş günü olarak)
+    var worst = null;
+    for (var i = 1; i < evs.length; i++) {
+      var g = bdBetween(evs[i - 1].time, evs[i].time);
+      if (!worst || g > worst.g) worst = { g: g, a: evs[i - 1], b: evs[i] };
+    }
+    if (worst && worst.g >= 2) {
+      out.push('En uzun bekleme: ' + worst.g + ' iş günü (' + dayOnly(worst.a.time) + ' ile ' + dayOnly(worst.b.time) + ' arası).');
+    }
+
+    // Şu anki durum
+    var an = r.analysis || {};
+    var state = r.delivered
+      ? 'Teslim edildi: ' + dayOnly(last.time) + (last.location ? ', ' + last.location : '') + '.'
+      : 'Şu anki durum: ' + liveHeadline(r) + ' Son hareket "' + dTr(last).replace(/\.$/, '') + '" (' + dayOnly(last.time) +
+        ', ' + agoText(businessDaysSince(last.time)).toLowerCase() + ').';
+    out.push(state);
+    if (an.returned) out.push('İadeye dönüş: ' + dayOnly(an.returned.time) + ' (' + agoText(businessDaysSince(an.returned.time)).toLowerCase() + ').');
+    return out;
+  }
   function sig(r) { return r && r.last ? r.last.time + '|' + r.last.description : ''; }
 
   // Yeni sorgu: kayıt en üste taşınır. Daha önce varsa "yeni hareket" işareti sıfırlanır.
@@ -475,7 +596,11 @@
       var parts = ['Tekrar kontrol tamamlandı'];
       if (changed) parts.push(changed + ' kargoda yeni hareket var');
       if (failed) parts.push(failed + ' kargo kontrol edilemedi');
-      setNotice(parts.join(' · '), failed > 0 && failed === entries.length);
+      var acts = entries.filter(function (e) { return e.changed; }).slice(0, 6).map(function (e) {
+        var name = e.result && (e.result.packageNumber || e.result.id) || e.key;
+        return { label: 'Hareketi gör: ' + name, onClick: function () { showEntry(e.key); } };
+      });
+      setNotice(parts.join(' · '), failed > 0 && failed === entries.length, acts);
     }
   }
 
@@ -646,6 +771,7 @@
     body.appendChild(dl);
 
     if (r.events && r.events.length) {
+      var evwrap = el('div', 'evwrap');
       var det = el('details');
       det.appendChild(el('summary', null, 'Tüm hareketler (' + r.events.length + ')'));
       var ol = el('ol');
@@ -657,7 +783,29 @@
         ol.appendChild(li);
       });
       det.appendChild(ol);
-      body.appendChild(det);
+      evwrap.appendChild(det);
+      var sumBox = el('div', 'journey');
+      sumBox.hidden = true;
+      var sb = el('button', 'mini sumbtn', 'Hareketleri özetle');
+      sb.type = 'button';
+      sb.addEventListener('click', function () {
+        if (sumBox.hidden) {
+          sumBox.replaceChildren();
+          sumBox.appendChild(el('div', 'label', 'Hareket özeti'));
+          var ul2 = el('ul');
+          journeySummary(r).forEach(function (t) { ul2.appendChild(el('li', null, t)); });
+          sumBox.appendChild(ul2);
+          sumBox.appendChild(el('div', 'orig', 'Bu özet, kargo kayıtlarından otomatik çıkarılır.'));
+          sumBox.hidden = false;
+          sb.textContent = 'Özeti gizle';
+        } else {
+          sumBox.hidden = true;
+          sb.textContent = 'Hareketleri özetle';
+        }
+      });
+      evwrap.appendChild(sb);
+      body.appendChild(evwrap);
+      body.appendChild(sumBox);
     }
 
     // Alt satır: son kontrol zamanı ve tekrar kontrol düğmesi
@@ -728,6 +876,163 @@
     renderHistory();
     if ($('results').scrollIntoView) $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
+
+
+  // ---------- Asistan: geçmişteki kargolar hakkında soru-cevap (kural tabanlı, dışarıya veri göndermez) ----------
+  function nrm(t) {
+    return String(t || '').toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function asstItems() {
+    return history.filter(function (e) { return e.result && e.result.ok; });
+  }
+  var ASST_FILTERS = [
+    { id: 'notdelivered', re: /(teslim|ulas)\w* (edilmeyen|edilmemis|edilmedi|olmayan|olmamis)|teslim edilmemis|henuz teslim/, label: 'henüz teslim edilmemiş',
+      test: function (r) { return !r.delivered; } },
+    { id: 'delivered', re: /teslim|ulasan|ulasti/, label: 'teslim edilmiş', test: function (r) { return r.delivered; } },
+    { id: 'delayed', re: /gecik/, label: 'gecikmede', test: function (r) { return verdictOf(r) === 'delayed'; } },
+    { id: 'returned', re: /iade|geri don/, label: 'iadeye dönmüş', test: function (r) { return verdictOf(r) === 'returned' || !!(r.analysis && r.analysis.returned); } },
+    { id: 'stalled', re: /hareket(siz| yok| etmeyen| etmiyor)|durgun|bekleyen|bekliyor|takili|kalan/, label: 'hareketsiz (3+ iş günü)',
+      test: function (r) { return !!(r.analysis && r.analysis.flags && r.analysis.flags.stalled); } },
+    { id: 'ontrack', re: /yolda|sorunsuz|normal|problemsiz/, label: 'sorunsuz yolda', test: function (r) { return verdictOf(r) === 'ontrack'; } },
+    { id: 'attention', re: /dikkat/, label: 'dikkat gerektiriyor', test: function (r) { return verdictOf(r) === 'attention'; } },
+  ];
+  var ASST_PROVIDERS = [['apc', 'APC'], ['asendia', 'Asendia'], ['sagawa', 'Sagawa']];
+
+  function asstRow(e) {
+    var r = e.result;
+    var li = el('li');
+    var lg = logoFor(r, true);
+    if (lg) li.appendChild(lg);
+    var main = el('span', 'a-main');
+    main.appendChild(el('span', 'pkg', r.packageNumber || r.id));
+    var sub = alertText(r);
+    if (r.last) sub += ' · ' + (r.delivered ? 'Teslim: ' : 'Son güncelleme: ') + agoText(businessDaysSince(r.last.time)).toLowerCase();
+    main.appendChild(el('span', 'a-sub', sub));
+    li.appendChild(main);
+    var b = el('button', 'mini', 'Gör');
+    b.type = 'button';
+    b.addEventListener('click', function () { showEntry(e.key); });
+    li.appendChild(b);
+    return li;
+  }
+
+  function asstAnswer(q) {
+    var n = nrm(q);
+    var items = asstItems();
+    if (!items.length) return { text: 'Geçmişte henüz kargo yok. Önce birkaç kargo sorgula, sonra buradan sorabilirsin.', rows: [] };
+
+    // 1) Sorguda geçmişteki bir takip numarası varsa o kargoyu anlat
+    var hit = null;
+    var toks = String(q).toLowerCase().split(/[\s,;]+/).filter(function (t) { return t.length >= 6; });
+    items.forEach(function (e) {
+      var r = e.result;
+      var ids = [e.key, e.queryId, r.packageNumber, r.id, r.ref2, r.localTrackingNumber].filter(Boolean).map(function (x) { return String(x).toLowerCase(); });
+      toks.forEach(function (t) { if (ids.indexOf(t) !== -1) hit = e; });
+    });
+    if (hit) {
+      var r0 = hit.result;
+      var t0 = (r0.packageNumber || r0.id) + ': ' + liveHeadline(r0);
+      if (r0.last) {
+        t0 += ' Son hareket "' + dTr(r0.last).replace(/\.$/, '') + '" (' + when(r0.last.time) + ', ' + agoText(businessDaysSince(r0.last.time)).toLowerCase() + ').';
+      }
+      if (r0.analysis && r0.analysis.returned) t0 += ' İadeye dönüş: ' + day(r0.analysis.returned.time) + ' (' + agoText(businessDaysSince(r0.analysis.returned.time)).toLowerCase() + ').';
+      return { text: t0, rows: [hit] };
+    }
+
+    // 2) Sıralama soruları
+    var sorted;
+    if (/en cok gecik|en gecikmis|en fazla gecik/.test(n)) {
+      sorted = items.filter(function (e) { return !e.result.delivered; }).sort(function (a, b) { return liveDelayDays(b.result) - liveDelayDays(a.result); }).slice(0, 5);
+      return { text: sorted.length ? 'En çok geciken kargolar:' : 'Gecikmiş kargo yok.', rows: sorted.filter(function (e) { return liveDelayDays(e.result) > 0; }) };
+    }
+    if (/en uzun|en eski|en cok bekle|en cok hareketsiz/.test(n)) {
+      sorted = items.filter(function (e) { return !e.result.delivered && e.result.last; })
+        .sort(function (a, b) { return businessDaysSince(b.result.last.time) - businessDaysSince(a.result.last.time); }).slice(0, 5);
+      return { text: sorted.length ? 'En uzun süredir hareket etmeyen kargolar:' : 'Bekleyen kargo yok.', rows: sorted };
+    }
+
+    // 3) Filtreler (durum + sistem)
+    var used = [], list = items, usedLabel = [];
+    var negDone = ASST_FILTERS[0];
+    var matchedIds = {};
+    if (negDone.re.test(n)) matchedIds.notdelivered = true;
+    ASST_FILTERS.slice(1).forEach(function (f) {
+      if (matchedIds.notdelivered && f.id === 'delivered') return;
+      if (f.re.test(n)) matchedIds[f.id] = true;
+    });
+    if (/yeni hareket|degisen|guncellenen|yeni guncelleme/.test(n)) matchedIds.changed = true;
+    if (/hata|kontrol edilemeyen|sorgulanamayan|bulunamayan/.test(n)) matchedIds.error = true;
+    var prov = ASST_PROVIDERS.filter(function (p) { return n.indexOf(p[0]) !== -1; });
+
+    if (matchedIds.error) {
+      list = history.filter(function (e) { return !!e.error; });
+      return { text: list.length + ' kargo son kontrolde hata verdi.', rows: list.filter(function (e) { return e.result; }) };
+    }
+    if (matchedIds.changed) { list = list.filter(function (e) { return e.changed; }); usedLabel.push('yeni hareketi var'); }
+    ASST_FILTERS.forEach(function (f) {
+      if (matchedIds[f.id]) { list = list.filter(function (e) { return f.test(e.result); }); usedLabel.push(f.label); }
+    });
+    if (prov.length) {
+      list = list.filter(function (e) { return prov.some(function (p) { return e.result.provider === p[0]; }); });
+    }
+
+    if (!usedLabel.length && !prov.length) {
+      if (/ozet|genel|durum|toplam|kac kargo|kac tane|hepsi/.test(n)) {
+        var cnt = function (f) { return items.filter(function (e) { return f.test(e.result); }).length; };
+        var parts = [items.length + ' kargo takipte'];
+        parts.push(cnt(ASST_FILTERS[1]) + ' teslim edilmiş');
+        parts.push(cnt(ASST_FILTERS[2]) + ' gecikmede');
+        parts.push(cnt(ASST_FILTERS[3]) + ' iadeye dönmüş');
+        parts.push(cnt(ASST_FILTERS[4]) + ' hareketsiz');
+        parts.push(cnt(ASST_FILTERS[5]) + ' sorunsuz yolda');
+        var delayedList = items.filter(function (e) { return verdictOf(e.result) === 'delayed' || verdictOf(e.result) === 'returned'; });
+        return { text: parts.join(', ') + '.' + (delayedList.length ? ' Dikkat isteyenler:' : ''), rows: delayedList };
+      }
+      return { text: null, rows: [] };
+    }
+
+    var who = prov.length ? prov.map(function (p) { return p[1]; }).join(' / ') + ' kargolarından ' : '';
+    var what = usedLabel.length ? usedLabel.join(' ve ') : 'kayıtlı';
+    var total = prov.length ? items.filter(function (e) { return prov.some(function (p) { return e.result.provider === p[0]; }); }).length : items.length;
+    var text = who + list.length + ' kargo ' + what + ' (toplam ' + total + ' kargo içinde).';
+    if (!list.length) text = (who ? who + ' ' : '') + 'hiç ' + what + ' kargo yok (toplam ' + total + ' kargo içinde).';
+    return { text: text, rows: list };
+  }
+
+  function asstAsk(q) {
+    var out = $('asstOut');
+    out.replaceChildren();
+    if (!String(q || '').trim()) return;
+    out.appendChild(el('div', 'a-q', 'Soru: ' + q));
+    var a = asstAnswer(q);
+    if (a.text === null) {
+      out.appendChild(el('div', 'a-ans', 'Bunu anlayamadım.'));
+      out.appendChild(el('div', 'a-note', 'Şunlara benzer sorular sorabilirsin: "kaç kargo gecikmede?", "teslim edilenler", "Asendia gecikmede olanlar", "hareketsiz kalanlar", "iadeye dönenler", "en çok geciken", ya da bir takip numarası yaz.'));
+      return;
+    }
+    out.appendChild(el('div', 'a-ans', a.text));
+    if (a.rows.length) {
+      var ul = el('ul', 'a-list');
+      a.rows.slice(0, 20).forEach(function (e) { ul.appendChild(asstRow(e)); });
+      out.appendChild(ul);
+      if (a.rows.length > 20) out.appendChild(el('div', 'a-note', '…ve ' + (a.rows.length - 20) + ' kargo daha.'));
+    }
+  }
+
+  (function initAssistant() {
+    var chips = $('asstChips');
+    ['Kaç kargo gecikmede?', 'Teslim edilenler', 'Teslim edilmeyenler', 'Hareketsiz kalanlar', 'İadeye dönenler', 'Genel durum'].forEach(function (t) {
+      var b = el('button', null, t);
+      b.type = 'button';
+      b.addEventListener('click', function () { $('asstQ').value = t; asstAsk(t); });
+      chips.appendChild(b);
+    });
+    $('asstForm').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      asstAsk($('asstQ').value);
+    });
+  })();
 
   // ---------- Geçmiş listesi ----------
   function renderHistory() {

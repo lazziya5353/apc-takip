@@ -176,6 +176,10 @@
   .col-side h2 { margin: 0; font-size: 17px; }
   .hist-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .hist-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+  .chipbtn { border: 1px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; padding: 3px 10px; }
+  .chipbtn:hover:not(:disabled) { border-color: currentColor; }
+  .chipbtn.on { border-color: currentColor; box-shadow: 0 0 0 2px currentColor inset; }
+  .verdict-head { margin: 14px 2px 0; font-weight: 800; font-size: 16px; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 0; }
   ul.hist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
   .h-item { border: 1px solid var(--line); border-left: 5px solid var(--vc); border-radius: 10px; background: var(--card); }
@@ -842,6 +846,12 @@
       var e = findEntry(view.key);
       if (!e) { clearMain(); return; }
       frag.appendChild(render(e.result, { key: e.key, checkedAt: e.checkedAt }));
+    } else if (view.type === 'verdict') {
+      var sel = history.filter(function (h) { return verdictOf(h.result) === view.verdict; });
+      if (!sel.length) { clearMain(); return; }
+      var head = el('p', 'verdict-head', VERDICTS[view.verdict][0] + ': ' + sel.length + ' kargo');
+      frag.appendChild(head);
+      sel.forEach(function (h) { h.changed = false; frag.appendChild(render(h.result, { key: h.key, checkedAt: h.checkedAt })); });
     } else {
       view.items.forEach(function (it) {
         if (!it.r.ok) { frag.appendChild(render(it.r)); return; }
@@ -855,6 +865,9 @@
   }
 
   function currentResults() {
+    if (view.type === 'verdict') {
+      return history.filter(function (h) { return verdictOf(h.result) === view.verdict; }).map(function (h) { return h.result; });
+    }
     if (view.type === 'entry') {
       var e = findEntry(view.key);
       return e ? [e.result] : [];
@@ -863,6 +876,21 @@
       var ent = it.r.ok ? findEntry(it.key) : null;
       return ent ? ent.result : it.r;
     });
+  }
+
+  // Geçmişteki durum etiketine (ör. "1 gecikme var") tıklayınca o durumdaki tüm kargoların kartları açılır.
+  function showVerdict(k) {
+    if (view.type === 'verdict' && view.verdict === k) {
+      clearMain();
+      setNotice('');
+      renderHistory();
+      return;
+    }
+    view = { type: 'verdict', key: null, verdict: k, items: [] };
+    setNotice('');
+    refreshMain();
+    renderHistory();
+    if ($('results').scrollIntoView) $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
   function showEntry(key) {
@@ -894,6 +922,11 @@
     { id: 'returned', re: /iade|geri don/, label: 'iadeye dönmüş', test: function (r) { return verdictOf(r) === 'returned' || !!(r.analysis && r.analysis.returned); } },
     { id: 'stalled', re: /hareket(siz| yok| etmeyen| etmiyor)|durgun|bekleyen|bekliyor|takili|kalan/, label: 'hareketsiz (3+ iş günü)',
       test: function (r) { return !!(r.analysis && r.analysis.flags && r.analysis.flags.stalled); } },
+    { id: 'problem', re: /sorunlu|sorunu|sorun var|problem/, label: 'sorunlu (gecikme, iade, dikkat ya da hareketsiz)',
+      test: function (r) {
+        var v = verdictOf(r);
+        return v === 'delayed' || v === 'returned' || v === 'attention' || !!(r.analysis && r.analysis.flags && r.analysis.flags.stalled);
+      } },
     { id: 'ontrack', re: /yolda|sorunsuz|normal|problemsiz/, label: 'sorunsuz yolda', test: function (r) { return verdictOf(r) === 'ontrack'; } },
     { id: 'attention', re: /dikkat/, label: 'dikkat gerektiriyor', test: function (r) { return verdictOf(r) === 'attention'; } },
   ];
@@ -1000,24 +1033,90 @@
     return { text: text, rows: list };
   }
 
-  function asstAsk(q) {
+  var aiState = { available: null, notified: false }; // null: bilinmiyor, false: anahtar yok
+
+  function asstShow(q, a, tag) {
     var out = $('asstOut');
     out.replaceChildren();
-    if (!String(q || '').trim()) return;
-    out.appendChild(el('div', 'a-q', 'Soru: ' + q));
-    var a = asstAnswer(q);
+    out.appendChild(el('div', 'a-q', 'Soru: ' + q + (tag ? ' · ' + tag : '')));
     if (a.text === null) {
       out.appendChild(el('div', 'a-ans', 'Bunu anlayamadım.'));
       out.appendChild(el('div', 'a-note', 'Şunlara benzer sorular sorabilirsin: "kaç kargo gecikmede?", "teslim edilenler", "Asendia gecikmede olanlar", "hareketsiz kalanlar", "iadeye dönenler", "en çok geciken", ya da bir takip numarası yaz.'));
+      if (a.note) out.appendChild(el('div', 'a-note', a.note));
       return;
     }
     out.appendChild(el('div', 'a-ans', a.text));
-    if (a.rows.length) {
+    if (a.rows && a.rows.length) {
       var ul = el('ul', 'a-list');
       a.rows.slice(0, 20).forEach(function (e) { ul.appendChild(asstRow(e)); });
       out.appendChild(ul);
       if (a.rows.length > 20) out.appendChild(el('div', 'a-note', '…ve ' + (a.rows.length - 20) + ' kargo daha.'));
     }
+    if (a.note) out.appendChild(el('div', 'a-note', a.note));
+  }
+
+  function aiPayload(q) {
+    return {
+      question: q,
+      shipments: asstItems().map(function (e) {
+        var r = e.result, an = r.analysis || {};
+        return {
+          key: e.key, provider: r.provider, verdict: verdictOf(r), delivered: !!r.delivered,
+          headline: liveHeadline(r), delayDays: liveDelayDays(r),
+          bdSinceLast: r.last ? businessDaysSince(r.last.time) : null,
+          lastDesc: r.last ? dTr(r.last) : null, lastTime: r.last ? r.last.time : null, lastPlace: r.last ? r.last.location : null,
+          returnedTime: an.returned ? an.returned.time : null,
+          bdSinceReturn: an.returned ? businessDaysSince(an.returned.time) : null,
+          origin: an.overview ? an.overview.origin : null, dest: an.overview ? an.overview.destination : null,
+          localCarrier: r.localCarrier, eventCount: (r.events || []).length, changed: !!e.changed,
+        };
+      }),
+    };
+  }
+
+  var asstSeq = 0;
+  async function asstAsk(q) {
+    q = String(q || '').trim();
+    var out = $('asstOut');
+    out.replaceChildren();
+    if (!q) return;
+    var my = ++asstSeq;
+    if (!asstItems().length) { asstShow(q, asstAnswer(q)); return; }
+
+    var note = null;
+    if (aiState.available !== false) {
+      out.appendChild(el('div', 'a-q', 'Soru: ' + q));
+      out.appendChild(el('div', 'a-note', 'Düşünüyorum…'));
+      try {
+        var res = await fetch('/api/assistant', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(aiPayload(q)),
+        });
+        if (my !== asstSeq) return;
+        if (res.status === 501) {
+          aiState.available = false;
+        } else {
+          var data = await res.json().catch(function () { return {}; });
+          if (res.ok && data && typeof data.answer === 'string') {
+            aiState.available = true;
+            var rows = (data.keys || []).map(function (k) { return findEntry(k); }).filter(Boolean);
+            asstShow(q, { text: data.answer, rows: rows }, 'yapay zeka');
+            return;
+          }
+          note = (data && data.error) ? data.error + ' Basit asistanla cevaplıyorum.' : 'Yapay zeka cevap vermedi, basit asistanla cevaplıyorum.';
+        }
+      } catch (e) {
+        if (my !== asstSeq) return;
+        note = 'Yapay zekaya ulaşılamadı, basit asistanla cevaplıyorum.';
+      }
+    }
+    var a = asstAnswer(q);
+    if (aiState.available === false && !aiState.notified) {
+      aiState.notified = true;
+      a.note = 'Not: Yapay zeka henüz açık değil (sunucuda ANTHROPIC_API_KEY ayarı yok), şimdilik basit asistan cevap veriyor.';
+    } else if (note) {
+      a.note = note;
+    }
+    asstShow(q, a, a.text === null ? '' : 'basit asistan');
   }
 
   (function initAssistant() {
@@ -1051,7 +1150,13 @@
     chips.replaceChildren();
     ['delayed', 'returned', 'attention', 'ontrack', 'delivered', 'unknown'].forEach(function (k) {
       if (!counts[k]) return;
-      chips.appendChild(el('span', 'badge ' + VERDICTS[k][1], counts[k] + ' ' + VERDICTS[k][0].toLowerCase()));
+      var active = view.type === 'verdict' && view.verdict === k;
+      var cb = el('button', 'badge chipbtn ' + VERDICTS[k][1] + (active ? ' on' : ''), counts[k] + ' ' + VERDICTS[k][0].toLowerCase());
+      cb.type = 'button';
+      cb.title = active ? 'Listeyi kapat' : 'Bu durumdaki kargoları göster';
+      cb.setAttribute('aria-pressed', active ? 'true' : 'false');
+      cb.addEventListener('click', function () { showVerdict(k); });
+      chips.appendChild(cb);
     });
 
     history.forEach(function (e) {

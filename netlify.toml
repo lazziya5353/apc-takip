@@ -10,3 +10,8 @@
   from = "/api/lookup"
   to = "/.netlify/functions/track"
   status = 200
+
+[[redirects]]
+  from = "/api/assistant"
+  to = "/.netlify/functions/assistant"
+  status = 200

@@ -4,10 +4,11 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { handleLookup } = require('./lib/apc');
+const { handleAssistant } = require('./lib/assistant');
 
 const PORT = Number(process.env.PORT) || 3000;
 const INDEX = path.join(__dirname, 'public', 'index.html');
-const MAX_BODY = 100 * 1024;
+const MAX_BODY = 200 * 1024;
 
 function send(res, status, body, type = 'application/json; charset=utf-8') {
   res.writeHead(status, {
@@ -58,6 +59,16 @@ const server = http.createServer(async (req, res) => {
       const raw = await readBody(req);
       const { text } = JSON.parse(raw || '{}');
       const out = await handleLookup(text);
+      return send(res, out.status, out.body);
+    } catch {
+      return send(res, 400, { error: 'Geçersiz istek.' });
+    }
+  }
+
+  if (req.method === 'POST' && pathname === '/api/assistant') {
+    try {
+      const raw = await readBody(req);
+      const out = await handleAssistant(JSON.parse(raw || '{}'), { ip: req.socket.remoteAddress });
       return send(res, out.status, out.body);
     } catch {
       return send(res, 400, { error: 'Geçersiz istek.' });

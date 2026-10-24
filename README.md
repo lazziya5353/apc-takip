@@ -38,6 +38,23 @@ ayrı bir API'si yok, sonuç sayfanın HTML'inde geliyor; `lib/sagawa.js` o tabl
 Tablodaki saatler yerel saattir, hareketin ülkesine göre saat dilimi seçilir. 12 haneli numara
 APC'nin yerel carrier numarası da olabilir, bu yüzden APC ve Sagawa sırayla denenir.
 
+## Asistan
+
+Sağ üstteki Asistan kutusu geçmiş kontrollerdeki kargolar hakkındaki soruları cevaplar.
+İki modu var:
+
+- **Yapay zeka (serbest yazı):** Netlify'da `ANTHROPIC_API_KEY` ortam değişkeni tanımlıysa soru,
+  kargoların kısa bir özetiyle birlikte Claude'a (`claude-haiku-5-5`, `ASSISTANT_MODEL` ile
+  değişir) gönderilir. Anahtar yalnızca sunucuda durur. Kargo özeti (numara, durum, son hareket
+  metni) her soruda Anthropic'e gider. Anahtar Anthropic Console hesabından alınır, kullanıma
+  göre ücretlidir. Kötüye kullanımı sınırlamak için IP başına dakikada 15 soru ve kısa cevap
+  sınırı var. Site herkese açıksa ortak şifre eklemeyi düşün.
+- **Basit asistan:** Anahtar yoksa ya da yapay zeka hata verirse anahtar kelimelerle çalışan
+  yerleşik asistan cevap verir ("kaç kargo gecikmede", "teslim edilenler" gibi). Veri dışarı gitmez.
+
+Geçmiş listesindeki durum etiketlerine ("1 gecikme var" gibi) tıklayınca o durumdaki tüm
+kargoların kartları ana alanda açılır.
+
 ## Durum özeti
 
 Her kargo için APC'nin hareket geçmişinden otomatik özet çıkar (`analyze` fonksiyonu, `lib/apc.js`):

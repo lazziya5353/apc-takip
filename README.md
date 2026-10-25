@@ -55,6 +55,15 @@ Sağ üstteki Asistan kutusu geçmiş kontrollerdeki kargolar hakkındaki sorula
 Geçmiş listesindeki durum etiketlerine ("1 gecikme var" gibi) tıklayınca o durumdaki tüm
 kargoların kartları ana alanda açılır.
 
+## Müşteri mesajı
+Geçmiş listesinden bir kargoyu açınca altta **Müşteri mesajı** düğmesi çıkar. Durumuna göre (teslim edildi, gecikme, iade, dikkat, yolda) Türkçe, "Merhabalar," ile başlayan hazır bir mesaj üretir. Metin düzenlenebilir, **Kopyala** ile alınır, **Yeniden oluştur** ile sıfırlanır.
+
+## Geçmişte arama, sıralama, filtre
+Geçmiş kutusunda arama (numara, carrier, yer, durum), sıralama (son sorgulanan, gecikme, hareketsiz süre, duruma göre) ve durum/sistem filtreleri vardır. Sayaç "2 / 10 kargo" gibi gösterir.
+
+## Excel'e aktarma
+**Excel indir** düğmesi `.xlsx` üretir (tarayıcıda, ek paket yok). Kapsam: listede görünenler, tümü, teslim edilenler, edilmeyenler, yolda, gecikmede, iade, dikkat.
+
 ## Durum özeti
 
 Her kargo için APC'nin hareket geçmişinden otomatik özet çıkar (`analyze` fonksiyonu, `lib/apc.js`):

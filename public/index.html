@@ -134,6 +134,9 @@
   .last .lastdetail { margin-top: 6px; font-size: 15px; }
   .last .orig { margin-top: 6px; font-size: 12px; color: var(--muted); font-style: italic; }
   .last .lastmsg { font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .msgbox { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--field); border-left: 4px solid var(--accent); }
+  .msgbox .label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .msgbox textarea { min-height: 150px; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--card); }
   .evwrap { position: relative; margin-top: 12px; }
   .evwrap .sumbtn { position: absolute; top: -3px; right: 0; font-weight: 700; border-color: var(--accent); color: var(--accent); }
   .journey { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: var(--field); border-left: 4px solid var(--accent); }
@@ -180,6 +183,14 @@
   .chipbtn:hover:not(:disabled) { border-color: currentColor; }
   .chipbtn.on { border-color: currentColor; box-shadow: 0 0 0 2px currentColor inset; }
   .verdict-head { margin: 14px 2px 0; font-weight: 800; font-size: 16px; }
+  .xls-box { margin-top: 8px; display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+  .xls-box select { min-width: 0; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--line); background: var(--field); color: var(--text); font: inherit; font-size: 13.5px; }
+  .hist-filter { margin-top: 12px; display: grid; gap: 6px; }
+  .hist-filter input, .hist-filter select { width: 100%; min-width: 0; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--line);
+                      background: var(--field); color: var(--text); font: inherit; font-size: 13.5px; }
+  .hist-filter .hf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .hist-filter #histSort { grid-column: 1 / -1; }
+  .hist-filter input:focus-visible, .hist-filter select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 0; }
   ul.hist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
   .h-item { border: 1px solid var(--line); border-left: 5px solid var(--vc); border-radius: 10px; background: var(--card); }
@@ -248,8 +259,50 @@
         <button id="recheckAll" type="button">Hepsini tekrar kontrol et</button>
         <button id="clearHist" class="danger" type="button">Geçmişi temizle</button>
       </div>
+      <div class="xls-box" id="xlsBox">
+        <select id="xlsScope" aria-label="Excel'e aktarılacak kargolar">
+          <option value="shown">Listede görünenler</option>
+          <option value="all">Tümü</option>
+          <option value="delivered">Teslim edilenler</option>
+          <option value="notdelivered">Teslim edilmeyenler</option>
+          <option value="ontrack">Yolda olanlar</option>
+          <option value="delayed">Gecikmede olanlar</option>
+          <option value="returned">İade olanlar</option>
+          <option value="attention">Dikkat gerekenler</option>
+        </select>
+        <button id="xlsBtn" type="button">Excel indir</button>
+      </div>
+      <div class="hist-filter">
+        <input id="histSearch" type="search" placeholder="Ara: numara, carrier, yer, durum…" maxlength="80" aria-label="Geçmişte ara">
+        <div class="hf-row">
+          <select id="histSort" aria-label="Sırala">
+            <option value="recent">Sırala: Son sorgulanan</option>
+            <option value="delay">Sırala: Gecikme (çoktan aza)</option>
+            <option value="stale">Sırala: En uzun süredir hareketsiz</option>
+            <option value="status">Sırala: Duruma göre</option>
+          </select>
+          <select id="histStatus" aria-label="Duruma göre filtrele">
+            <option value="">Tüm durumlar</option>
+            <option value="delayed">Gecikme var</option>
+            <option value="returned">İade</option>
+            <option value="attention">Dikkat</option>
+            <option value="ontrack">Yolunda</option>
+            <option value="delivered">Teslim edildi</option>
+            <option value="notdelivered">Teslim edilmemiş</option>
+            <option value="stalled">Hareketsiz (3+ iş günü)</option>
+            <option value="changed">Yeni hareketi var</option>
+          </select>
+          <select id="histProv" aria-label="Sisteme göre filtrele">
+            <option value="">Tüm sistemler</option>
+            <option value="apc">APC</option>
+            <option value="asendia">Asendia</option>
+            <option value="sagawa">Sagawa</option>
+          </select>
+        </div>
+      </div>
       <div class="chips" id="histStats"></div>
       <ul class="hist" id="histList"></ul>
+      <p id="histNoMatch" hidden>Bu arama ya da filtreyle eşleşen kargo yok.</p>
       <p id="histEmpty">Henüz kontrol yok. Sorguladığın kargolar burada durur.</p>
       <p class="hint" id="histNote"></p>
     </div>
@@ -434,6 +487,89 @@
   // Çeviri sunucudan gelir (descriptionTr/detailTr). Çevrilemeyen metin orijinal haliyle gösterilir.
   function dTr(e) { return e ? (e.descriptionTr || e.description) : ''; }
   function xTr(e) { return e ? (e.detailTr || e.detail) : ''; }
+
+
+  // ---------- Müşteri mesajı şablonu (depo panelinden alıcıya yazmak için, Türkçe) ----------
+  function customerMessage(r) {
+    var an = r.analysis || {}, last = r.last;
+    var num = r.packageNumber || r.id;
+    var verdict = an.verdict || 'unknown';
+    var bd = last ? businessDaysSince(last.time) : null;
+    var lastTxt = last ? '"' + dTr(last).replace(/\.$/, '') + '"' : '';
+    var lastPlace = last && last.location ? ', ' + last.location : '';
+    var lastWhen = last ? day(last.time) : '';
+    var est = '';
+    if (r.estFrom && r.estTo && !r.delivered) est = day(r.estFrom) + ' - ' + day(r.estTo);
+    var P = [];
+    P.push('Merhabalar,');
+
+    var body;
+    if (verdict === 'delivered' || r.delivered) {
+      body = num + ' takip numaralı gönderiniz ' + lastWhen + ' tarihinde' + lastPlace + ' teslim edilmiş görünüyor. ' +
+        'Teslimat adresinizi ve çevrenizi (kapı görevlisi, komşu, güvenlik vb.) kontrol etmenizi rica ederiz. ' +
+        'Kargo size ulaşmadıysa lütfen bize bildirin, hemen ilgilenelim.';
+    } else if (verdict === 'returned') {
+      var rt = an.returned ? day(an.returned.time) : lastWhen;
+      var rbd = an.returned ? businessDaysSince(an.returned.time) : null;
+      body = num + ' takip numaralı gönderiniz ' + rt + ' tarihinde kargo firması tarafından iade sürecine alınmış görünüyor' +
+        (rbd ? ' (üzerinden ' + rbd + ' iş günü geçti)' : '') + '. ' +
+        'Konuyu inceliyoruz ve size en kısa sürede bilgi vereceğiz.';
+    } else if (verdict === 'attention') {
+      body = num + ' takip numaralı gönderiniz için kargo firması teslimat denemesi yapmış, ancak teslim edilememiş görünüyor. ' +
+        (last ? 'Son durum: ' + lastTxt + ' (' + lastWhen + lastPlace + '). ' : '') +
+        'Teslimat sırasında adreste ve telefonla ulaşılabilir olmanızı rica ederiz.';
+    } else if (verdict === 'delayed') {
+      var reasons = [];
+      var dd = liveDelayDays(r);
+      if (dd > 0) reasons.push('tahmini teslimat tarihi' + (est ? ' (' + est + ')' : '') + ' geçmiş durumda (' + dd + ' gün)');
+      if (an.flags && an.flags.stalled && bd !== null) reasons.push('son ' + bd + ' iş günüdür kargoda yeni bir hareket görünmüyor');
+      if (an.flags && an.flags.nowDelayed) reasons.push('kargo firması gecikme bildirdi');
+      body = num + ' takip numaralı gönderiniz yolda, ancak kargo teslimatında gecikme yaşanıyor' +
+        (reasons.length ? ': ' + reasons.join(', ') : '') + '. ' +
+        (last ? 'Son durum: ' + lastTxt + ' (' + lastWhen + lastPlace + '). ' : '') +
+        'Süreci kargo firması nezdinde takip ediyoruz, yeni bir gelişme olduğunda sizi bilgilendireceğiz.';
+    } else if (verdict === 'ontrack') {
+      body = num + ' takip numaralı gönderiniz yolda ve sorunsuz ilerliyor. ' +
+        (last ? 'Son durum: ' + lastTxt + ' (' + lastWhen + lastPlace + '). ' : '') +
+        (est ? 'Tahmini teslimat aralığı: ' + est + '. ' : '') +
+        'Gelişme olduğunda sizi bilgilendireceğiz.';
+    } else {
+      body = num + ' takip numaralı gönderiniz için kargo firmasında henüz ayrıntılı bir hareket kaydı görünmüyor. ' +
+        'Kayıtları düzenli olarak kontrol ediyoruz, yeni bilgi geldiğinde sizi bilgilendireceğiz.';
+    }
+    P.push(body);
+    if (r.localCarrier && r.localTrackingNumber && r.localTrackingNumber !== num) {
+      P.push('Kargo firması takip numarası: ' + r.localCarrier + ' - ' + r.localTrackingNumber);
+    }
+    P.push('Anlayışınız için teşekkür ederiz.');
+    return P.join('\n\n');
+  }
+
+  function msgBox(r) {
+    var box = el('div', 'msgbox');
+    box.hidden = true;
+    var lab = el('div', 'label', 'Müşteriye gönderilecek mesaj (düzenleyebilirsin)');
+    var ta = el('textarea', 'msgtext');
+    ta.rows = 9;
+    ta.spellcheck = false;
+    var row = el('div', 'row');
+    var copy = el('button', 'primary', 'Kopyala');
+    copy.type = 'button';
+    var redo = el('button', null, 'Yeniden oluştur');
+    redo.type = 'button';
+    var ok = el('span', 'hint', '');
+    copy.addEventListener('click', function () {
+      var done = function () { ok.textContent = 'Kopyalandı ✓'; setTimeout(function () { ok.textContent = ''; }, 2000); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); ok.textContent = 'Seçildi, Ctrl+C ile kopyala'; });
+      } else { ta.select(); ok.textContent = 'Seçildi, Ctrl+C ile kopyala'; }
+    });
+    redo.addEventListener('click', function () { ta.value = customerMessage(r); });
+    row.appendChild(copy); row.appendChild(redo); row.appendChild(ok);
+    box.appendChild(lab); box.appendChild(ta); box.appendChild(row);
+    box.fill = function () { if (!ta.value) ta.value = customerMessage(r); };
+    return box;
+  }
 
   // ---------- Hareketleri özetle ----------
   function bdBetween(aIso, bIso) {
@@ -822,8 +958,18 @@
       foot.appendChild(rb);
       var ol = ownLink(r, false);
       if (ol) foot.appendChild(ol);
+      var mb = msgBox(r);
+      var mbtn = el('button', null, 'Müşteri mesajı');
+      mbtn.type = 'button';
+      mbtn.addEventListener('click', function () {
+        mb.hidden = !mb.hidden;
+        if (!mb.hidden) mb.fill();
+        mbtn.textContent = mb.hidden ? 'Müşteri mesajı' : 'Mesajı gizle';
+      });
+      foot.appendChild(mbtn);
       if (opts.checkedAt) foot.appendChild(el('span', 'hint', 'Son kontrol: ' + when(opts.checkedAt)));
       body.appendChild(foot);
+      body.appendChild(mb);
     }
 
     card.appendChild(body);
@@ -1133,13 +1279,170 @@
     });
   })();
 
+
+  // ---------- Geçmiş listesi: arama, sıralama, filtre ----------
+  var hf = { q: '', sort: 'recent', status: '', prov: '' };
+  var VERDICT_ORDER = { delayed: 0, returned: 1, attention: 2, ontrack: 3, unknown: 4, delivered: 5 };
+  function histHaystack(e) {
+    var r = e.result;
+    return nrm([
+      r.packageNumber, r.id, r.ref2, r.ref1, r.localTrackingNumber, r.carrierTrackingNumber, r.localCarrier, r.providerName,
+      r.shipTo, r.service, VERDICTS[verdictOf(r)][0], alertText(r),
+      r.last ? dTr(r.last) + ' ' + r.last.description + ' ' + (r.last.location || '') : '',
+    ].filter(Boolean).join(' '));
+  }
+  function statusMatch(e, st) {
+    var r = e.result;
+    if (!st) return true;
+    if (st === 'notdelivered') return !r.delivered;
+    if (st === 'stalled') return !!(r.analysis && r.analysis.flags && r.analysis.flags.stalled);
+    if (st === 'changed') return !!e.changed;
+    return verdictOf(r) === st;
+  }
+  function visibleHistory() {
+    var q = nrm(hf.q);
+    var list = history.filter(function (e) {
+      if (hf.prov && e.result.provider !== hf.prov) return false;
+      if (!statusMatch(e, hf.status)) return false;
+      if (q) {
+        var hay = histHaystack(e);
+        return q.split(' ').every(function (w) { return hay.indexOf(w) !== -1; });
+      }
+      return true;
+    });
+    var bdOf = function (e) { return e.result.last ? businessDaysSince(e.result.last.time) : -1; };
+    if (hf.sort === 'delay') {
+      list = list.slice().sort(function (a, b) {
+        return (liveDelayDays(b.result) - liveDelayDays(a.result)) || (bdOf(b) - bdOf(a));
+      });
+    } else if (hf.sort === 'stale') {
+      list = list.slice().sort(function (a, b) {
+        var da = a.result.delivered ? -2 : bdOf(a), db = b.result.delivered ? -2 : bdOf(b);
+        return db - da;
+      });
+    } else if (hf.sort === 'status') {
+      list = list.slice().sort(function (a, b) {
+        return VERDICT_ORDER[verdictOf(a.result)] - VERDICT_ORDER[verdictOf(b.result)];
+      });
+    }
+    return list;
+  }
+  ['histSearch', 'histSort', 'histStatus', 'histProv'].forEach(function (id) {
+    var node = $(id);
+    var ev = id === 'histSearch' ? 'input' : 'change';
+    node.addEventListener(ev, function () {
+      hf.q = $('histSearch').value; hf.sort = $('histSort').value; hf.status = $('histStatus').value; hf.prov = $('histProv').value;
+      renderHistory();
+    });
+  });
+
+
+  // ---------- Excel (.xlsx) dışa aktarma: bağımlılık yok, kendi ZIP/XLSX yazıcımız ----------
+  var CRC_T = (function () {
+    var t = [];
+    for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+    return t;
+  })();
+  function crc32(u8) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function zipStore(files) { // files: [{name, data(string)}], sıkıştırmasız ZIP
+    var enc = new TextEncoder(), parts = [], central = [], offset = 0;
+    function u16(v) { return [v & 255, (v >>> 8) & 255]; }
+    function u32(v) { return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; }
+    files.forEach(function (f) {
+      var name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+      var head = [].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
+      parts.push(new Uint8Array(head), name, data);
+      central.push({ name: name, crc: crc, size: data.length, offset: offset });
+      offset += head.length + name.length + data.length;
+    });
+    var cdStart = offset;
+    central.forEach(function (c) {
+      var h = [].concat(u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(c.crc), u32(c.size), u32(c.size), u16(c.name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(c.offset));
+      parts.push(new Uint8Array(h), c.name);
+      offset += h.length + c.name.length;
+    });
+    var end = [].concat(u32(0x06054b50), u16(0), u16(0), u16(central.length), u16(central.length), u32(offset - cdStart), u32(cdStart), u16(0));
+    parts.push(new Uint8Array(end));
+    return new Blob(parts, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  function xmlEsc(t) { return String(t).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function colName(i) { var n = ''; i++; while (i > 0) { var m = (i - 1) % 26; n = String.fromCharCode(65 + m) + n; i = Math.floor((i - 1) / 26); } return n; }
+  var XLS_HEAD = ['Takip no', 'Sistem', 'Durum', 'Gecikme (gün)', 'Son hareket', 'Son hareket zamanı', 'Konum', 'Hareketsiz (iş günü)', 'Teslim zamanı',
+    'Alıcı', 'Hizmet', 'Referans', 'Kargo firması', 'Kargo firması takip no', 'Uyarı', 'Son kontrol'];
+  function xlsRow(e) {
+    var r = e.result, l = r.last;
+    var provName = ({ apc: 'APC', asendia: 'Asendia', sagawa: 'Sagawa' })[r.provider] || r.providerName || r.provider || '';
+    var bd = l && !r.delivered ? businessDaysSince(l.time) : '';
+    return [
+      r.packageNumber || r.id || e.queryId || '', provName, VERDICTS[verdictOf(r)][0],
+      r.delivered ? 0 : liveDelayDays(r),
+      l ? dTr(l) : '', l ? when(l.time) : '', l && l.location ? l.location : '',
+      bd, r.delivered && l ? when(l.time) : '',
+      r.shipTo || '', r.service || '', r.ref2 || r.ref1 || '', r.localCarrier || '', r.localTrackingNumber || '',
+      alertText(r) || '', when(e.checkedAt)
+    ];
+  }
+  function buildXlsx(entries) {
+    var rows = [XLS_HEAD].concat(entries.map(xlsRow));
+    var widths = XLS_HEAD.map(function (h) { return h.length + 4; });
+    var sheetRows = rows.map(function (row, ri) {
+      var cells = row.map(function (v, ci) {
+        var ref = colName(ci) + (ri + 1), st = ri === 0 ? ' s="1"' : '';
+        if (v === '' || v == null) return '<c r="' + ref + '"' + st + '/>';
+        var len = String(v).length + 2; if (len > widths[ci]) widths[ci] = Math.min(len, 60);
+        if (typeof v === 'number') return '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>';
+        return '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>';
+      }).join('');
+      return '<row r="' + (ri + 1) + '">' + cells + '</row>';
+    }).join('');
+    var last = colName(XLS_HEAD.length - 1) + rows.length;
+    var cols = widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('');
+    var NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+    var R = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    var H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    return zipStore([
+      { name: '[Content_Types].xml', data: H + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+      { name: '_rels/.rels', data: H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+      { name: 'xl/workbook.xml', data: H + '<workbook ' + NS + ' ' + R + '><sheets><sheet name="Kargolar" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', data: H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/styles.xml', data: H + '<styleSheet ' + NS + '><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E79"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
+      { name: 'xl/worksheets/sheet1.xml', data: H + '<worksheet ' + NS + '><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>' + cols + '</cols><sheetData>' + sheetRows + '</sheetData><autoFilter ref="A1:' + last + '"/></worksheet>' }
+    ]);
+  }
+  function xlsSelect(scope) {
+    if (scope === 'shown') return visibleHistory();
+    if (scope === 'all') return history.slice();
+    if (scope === 'notdelivered') return history.filter(function (e) { return !e.result.delivered; });
+    return history.filter(function (e) { return verdictOf(e.result) === scope; });
+  }
+  $('xlsBtn').addEventListener('click', function () {
+    var list = xlsSelect($('xlsScope').value);
+    if (!list.length) { setNotice('Bu seçimde aktarılacak kargo yok.', true); return; }
+    var blob = buildXlsx(list);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'kargo-durumlari-' + ymd(Date.now()) + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    setNotice(list.length + ' kargo Excel dosyasına aktarıldı.', false);
+  });
+
   // ---------- Geçmiş listesi ----------
   function renderHistory() {
     var list = $('histList');
     list.replaceChildren();
     $('histEmpty').style.display = history.length ? 'none' : 'block';
-    $('histCount').textContent = history.length ? history.length + ' kargo' : '';
+    var shown = visibleHistory();
+    var filtered = !!(hf.q || hf.status || hf.prov);
+    $('histCount').textContent = history.length ? (filtered ? shown.length + ' / ' + history.length + ' kargo' : history.length + ' kargo') : '';
+    $('histNoMatch').hidden = !(history.length && !shown.length);
+    document.querySelector('.hist-filter').style.display = history.length ? 'grid' : 'none';
     $('clearHist').disabled = !history.length;
+    $('xlsBtn').disabled = !history.length;
     $('recheckAll').disabled = !history.length || Object.keys(busy).length > 0;
     $('histNote').textContent = storageOk ? '' : 'Tarayıcı geçmişi kaydetmeye izin vermiyor, liste sayfa kapanınca silinir.';
 
@@ -1159,7 +1462,7 @@
       chips.appendChild(cb);
     });
 
-    history.forEach(function (e) {
+    shown.forEach(function (e) {
       var r = e.result;
       var verdict = verdictOf(r);
       var li = el('li', 'h-item v-' + verdict + (view.type === 'entry' && view.key === e.key ? ' active' : ''));

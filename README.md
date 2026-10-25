@@ -78,7 +78,7 @@ gördüğünde `RETURN_RE` ifadesini ona göre güncellemek gerekebilir.
 
 ## Geçmiş kontroller
 
-Sorguladığın her kargo sağdaki "Geçmiş kontroller" listesine düşer (en fazla 60). Liste o
+Sorguladığın her kargo sağdaki "Geçmiş kontroller" listesine düşer (sayı sınırı yok; tarayıcı kotası dolarsa hareket listeleri kısaltılarak saklanır). Liste o
 tarayıcının `localStorage` alanında durur: başka bilgisayarda ya da tarayıcıda görünmez, tarayıcı
 verisini silersen gider. Sunucuda hiçbir şey saklanmaz.
 

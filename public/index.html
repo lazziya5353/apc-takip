@@ -203,6 +203,16 @@
   /* Geçmiş kontroller */
   .col-side h2 { margin: 0; font-size: 17px; }
   .hist-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  dialog.deldlg { border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--text); padding: 20px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  dialog.deldlg::backdrop { background: rgba(5, 8, 24, .6); backdrop-filter: blur(3px); }
+  dialog.deldlg h2 { margin: 0 0 4px; font-size: 18px; }
+  .delopts { display: grid; gap: 6px; margin: 14px 0 4px; }
+  .delopt { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; background: var(--field); }
+  .delopt:hover:not(.off) { border-color: var(--accent); }
+  .delopt.off { opacity: .45; cursor: default; }
+  .delopt span { flex: 1; }
+  .delopt b { color: var(--muted); font-weight: 700; }
+  .delopt input { accent-color: var(--accent); }
   .rbar { margin: 8px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); -webkit-backdrop-filter: var(--panel-blur); backdrop-filter: var(--panel-blur); }
   .rbar[hidden] { display: none; }
   .rbar .rtop { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
@@ -356,7 +366,6 @@
 (function () {
   'use strict';
   var STORE_KEY = 'apc-takip-gecmis-v1';
-  var MAX_HISTORY = 60;
   var $ = function (id) { return document.getElementById(id); };
   var fmt = new Intl.DateTimeFormat('tr-TR', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Istanbul'
@@ -486,9 +495,20 @@
       history = Array.isArray(arr) ? arr.filter(isEntry) : [];
     } catch (e) { history = []; storageOk = false; }
   }
+  // Kayıt sayısında sınır yok. Tarayıcı kotası dolarsa önce hareket listeleri kısaltılarak
+  // (son 6 hareket) kaydedilir; yine olmazsa liste yalnızca bu sayfa açıkken tutulur.
   function saveHistory() {
-    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(history)); }
-    catch (e) { storageOk = false; }
+    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(history)); storageOk = true; return; }
+    catch (e) { /* kota dolmuş olabilir */ }
+    try {
+      var slim = history.map(function (e) {
+        var r = Object.assign({}, e.result);
+        if (r.events && r.events.length > 6) r.events = r.events.slice(0, 6);
+        return Object.assign({}, e, { result: r });
+      });
+      window.localStorage.setItem(STORE_KEY, JSON.stringify(slim));
+      storageOk = true;
+    } catch (e2) { storageOk = false; }
   }
   function findEntry(key) {
     for (var i = 0; i < history.length; i++) if (history[i].key === key) return history[i];
@@ -701,7 +721,6 @@
     if (old) history.splice(history.indexOf(old), 1);
     var entry = { key: key, queryId: r.id, checkedAt: checkedAt, changed: false, error: null, result: r };
     history.unshift(entry);
-    if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
     return entry;
   }
 
@@ -806,15 +825,66 @@
     }
   }
 
+  // Silme penceresi: hangi grubun silineceği seçilir.
+  var DEL_OPTIONS = [
+    ['delivered', 'Teslim edilenler', function (e) { return !!e.result.delivered; }],
+    ['ontrack', 'Yolda olanlar', function (e) { return verdictOf(e.result) === 'ontrack'; }],
+    ['delayed', 'Gecikmede olanlar', function (e) { return verdictOf(e.result) === 'delayed'; }],
+    ['returned', 'İade olanlar', function (e) { return verdictOf(e.result) === 'returned'; }],
+    ['attention', 'Dikkat gerekenler', function (e) { return verdictOf(e.result) === 'attention'; }],
+    ['notdelivered', 'Teslim edilmeyenlerin tümü', function (e) { return !e.result.delivered; }],
+    ['errors', 'Kontrol edilemeyenler (hatalı)', function (e) { return !!e.error; }],
+    ['all', 'Tümü', function () { return true; }]
+  ];
   function clearHistory() {
     if (!history.length) return;
-    if (!window.confirm('Tüm geçmiş kontroller silinsin mi? Bu işlem geri alınamaz.')) return;
-    history = [];
-    saveHistory();
-    if (view.type === 'entry') clearMain();
-    renderHistory();
-    refreshMain();
-    setNotice('Geçmiş temizlendi.');
+    var dlg = el('dialog', 'deldlg');
+    dlg.setAttribute('aria-labelledby', 'delTitle');
+    var h = el('h2', null, 'Hangi kayıtlar silinsin?'); h.id = 'delTitle';
+    var note = el('p', 'hint', 'Seçtiğiniz gruptaki kargolar geçmişten kalıcı olarak kaldırılır.');
+    var list = el('div', 'delopts');
+    var okBtn = el('button', 'danger', 'Sil');
+    okBtn.type = 'button';
+    var cancel = el('button', null, 'Vazgeç');
+    cancel.type = 'button';
+    var chosen = null;
+    function count(opt) { return history.filter(opt[2]).length; }
+    function refresh() {
+      var n = chosen ? count(chosen) : 0;
+      okBtn.disabled = !chosen || !n;
+      okBtn.textContent = chosen ? n + ' kargoyu sil' : 'Sil';
+    }
+    DEL_OPTIONS.forEach(function (opt) {
+      var n = count(opt);
+      var lab = el('label', 'delopt' + (n ? '' : ' off'));
+      var rb = el('input'); rb.type = 'radio'; rb.name = 'delgrp'; rb.disabled = !n;
+      rb.addEventListener('change', function () { chosen = opt; refresh(); });
+      lab.appendChild(rb);
+      lab.appendChild(el('span', null, opt[1]));
+      lab.appendChild(el('b', null, String(n)));
+      list.appendChild(lab);
+    });
+    var row = el('div', 'row');
+    row.appendChild(okBtn); row.appendChild(cancel);
+    dlg.appendChild(h); dlg.appendChild(note); dlg.appendChild(list); dlg.appendChild(row);
+    document.body.appendChild(dlg);
+    function close() { if (dlg.open) dlg.close(); dlg.remove(); }
+    cancel.addEventListener('click', close);
+    dlg.addEventListener('cancel', function () { setTimeout(close, 0); });
+    okBtn.addEventListener('click', function () {
+      if (!chosen) return;
+      var pred = chosen[2], before = history.length;
+      history = history.filter(function (e) { return !pred(e); });
+      var removed = before - history.length;
+      saveHistory();
+      if (view.type === 'entry' && !findEntry(view.key)) clearMain();
+      renderHistory();
+      refreshMain();
+      close();
+      setNotice(removed + ' kargo geçmişten silindi.');
+    });
+    refresh();
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
 
   // ---------- Kart çizimi ----------

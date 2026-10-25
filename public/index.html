@@ -6,9 +6,11 @@
 <title>APC &amp; Asendia &amp; Sagawa Kargo Takip</title>
 <style>
   :root {
-    --bg: #e4e1d6; --card: #f8f6f0; --text: #23222b; --muted: #5e5c68; --line: #d3cfc2; --field: #efece3;
-    --accent: #2b2e7d; --accent-text: #ffffff; --link: #2b2e7d;
-    --hero-from: #1f2260; --hero-to: #4b50d1;
+    --bg: #eef2f8; --card: #ffffff; --text: #14233f; --muted: #52618a; --line: #dde3ee; --field: #f6f8fc;
+    --accent: #1f4fd8; --accent-text: #ffffff; --link: #1f4fd8;
+    --hero-bg: linear-gradient(100deg, #0f2a6b, #1f4fd8);
+    --bgart: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' viewBox='0 0 1600 1000'><g fill='none' stroke='%23b9c6dd' stroke-opacity='.6' stroke-width='1.2'><ellipse cx='1230' cy='640' rx='130' ry='76'/><ellipse cx='1230' cy='640' rx='230' ry='136'/><ellipse cx='1230' cy='640' rx='340' ry='200'/><ellipse cx='1230' cy='640' rx='460' ry='270'/><ellipse cx='1230' cy='640' rx='590' ry='345'/><ellipse cx='1230' cy='640' rx='730' ry='425'/><ellipse cx='200' cy='860' rx='100' ry='64'/><ellipse cx='200' cy='860' rx='200' ry='124'/><ellipse cx='200' cy='860' rx='310' ry='190'/><ellipse cx='200' cy='860' rx='430' ry='260'/></g><g stroke='%23cfd8e8' stroke-width='1' opacity='.7'><path d='M0 160H1600M0 330H1600M0 500H1600M0 670H1600M0 840H1600M200 0V1000M400 0V1000M600 0V1000M800 0V1000M1000 0V1000M1200 0V1000M1400 0V1000'/></g><path d='M120 760 C 480 470, 800 700, 1120 420 S 1460 380, 1540 260' fill='none' stroke='%231f4fd8' stroke-width='3' stroke-dasharray='2 11' stroke-linecap='round' opacity='.55'/><circle cx='120' cy='760' r='7' fill='%231f4fd8' opacity='.6'/><circle cx='1120' cy='420' r='7' fill='%23e0a100' opacity='.7'/><circle cx='1540' cy='260' r='7' fill='%2317a870' opacity='.7'/></svg>");
+    --panel-blur: none;
     --ok: #0b6b3d; --ok-bg: #d6ecdd; --warn: #7a4600; --warn-bg: #f6e4bf;
     --bad: #a8231c; --bad-bg: #f5d9d3; --info: #17559f; --info-bg: #d8e6f3;
     --neutral: #5e5c68; --neutral-bg: #e9e6dc;
@@ -16,9 +18,11 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #14151d; --card: #1e2030; --text: #e6e7ef; --muted: #a0a4ba; --line: #2f3248; --field: #171826;
-      --accent: #959aff; --accent-text: #10111a; --link: #a9adff;
-      --hero-from: #14164a; --hero-to: #2f33a0;
+      --bg: #0a0e2a; --card: rgba(22, 26, 62, .82); --text: #e8ecff; --muted: #aab4e6; --line: rgba(255, 255, 255, .15); --field: rgba(5, 8, 30, .6);
+      --accent: #8ea2ff; --accent-text: #0a0e2a; --link: #a9bbff;
+      --hero-bg: transparent;
+      --bgart: radial-gradient(900px 520px at 12% 8%, rgba(124,92,255,.5), transparent 60%), radial-gradient(800px 560px at 92% 18%, rgba(0,200,255,.3), transparent 62%), radial-gradient(900px 600px at 60% 105%, rgba(255,90,170,.25), transparent 60%), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' viewBox='0 0 1600 1000'><defs><pattern id='d' width='28' height='28' patternUnits='userSpaceOnUse'><circle cx='2' cy='2' r='1.3' fill='%23b4c8ff' fill-opacity='.16'/></pattern><linearGradient id='a' x1='0' x2='1'><stop offset='0' stop-color='%237c5cff' stop-opacity='0'/><stop offset='.5' stop-color='%237ce7ff'/><stop offset='1' stop-color='%23ff6bb5' stop-opacity='0'/></linearGradient></defs><rect width='1600' height='1000' fill='url(%23d)'/><path d='M-20 780 C 300 480, 650 420, 950 580 S 1430 680, 1620 300' fill='none' stroke='url(%23a)' stroke-width='2' stroke-dasharray='3 9' stroke-linecap='round'/><path d='M-20 880 C 380 690, 750 690, 1070 780 S 1480 880, 1620 640' fill='none' stroke='url(%23a)' stroke-width='1.5' stroke-dasharray='2 10' stroke-linecap='round' opacity='.7'/><circle cx='950' cy='580' r='5' fill='%237ce7ff'/><circle cx='950' cy='580' r='14' fill='none' stroke='%237ce7ff' stroke-opacity='.35'/></svg>");
+      --panel-blur: blur(14px);
       --ok: #62d79c; --ok-bg: #15372a; --warn: #f4bb52; --warn-bg: #3b2e12;
       --bad: #ff8b82; --bad-bg: #46201d; --info: #84b9f6; --info-bg: #162a42;
       --neutral: #9ba0b8; --neutral-bg: #262939;
@@ -26,21 +30,23 @@
     }
   }
   :root[data-theme="dark"] {
-      --bg: #14151d; --card: #1e2030; --text: #e6e7ef; --muted: #a0a4ba; --line: #2f3248; --field: #171826;
-      --accent: #959aff; --accent-text: #10111a; --link: #a9adff;
-      --hero-from: #14164a; --hero-to: #2f33a0;
+      --bg: #0a0e2a; --card: rgba(22, 26, 62, .82); --text: #e8ecff; --muted: #aab4e6; --line: rgba(255, 255, 255, .15); --field: rgba(5, 8, 30, .6);
+      --accent: #8ea2ff; --accent-text: #0a0e2a; --link: #a9bbff;
+      --hero-bg: transparent;
+      --bgart: radial-gradient(900px 520px at 12% 8%, rgba(124,92,255,.5), transparent 60%), radial-gradient(800px 560px at 92% 18%, rgba(0,200,255,.3), transparent 62%), radial-gradient(900px 600px at 60% 105%, rgba(255,90,170,.25), transparent 60%), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' viewBox='0 0 1600 1000'><defs><pattern id='d' width='28' height='28' patternUnits='userSpaceOnUse'><circle cx='2' cy='2' r='1.3' fill='%23b4c8ff' fill-opacity='.16'/></pattern><linearGradient id='a' x1='0' x2='1'><stop offset='0' stop-color='%237c5cff' stop-opacity='0'/><stop offset='.5' stop-color='%237ce7ff'/><stop offset='1' stop-color='%23ff6bb5' stop-opacity='0'/></linearGradient></defs><rect width='1600' height='1000' fill='url(%23d)'/><path d='M-20 780 C 300 480, 650 420, 950 580 S 1430 680, 1620 300' fill='none' stroke='url(%23a)' stroke-width='2' stroke-dasharray='3 9' stroke-linecap='round'/><path d='M-20 880 C 380 690, 750 690, 1070 780 S 1480 880, 1620 640' fill='none' stroke='url(%23a)' stroke-width='1.5' stroke-dasharray='2 10' stroke-linecap='round' opacity='.7'/><circle cx='950' cy='580' r='5' fill='%237ce7ff'/><circle cx='950' cy='580' r='14' fill='none' stroke='%237ce7ff' stroke-opacity='.35'/></svg>");
+      --panel-blur: blur(14px);
       --ok: #62d79c; --ok-bg: #15372a; --warn: #f4bb52; --warn-bg: #3b2e12;
       --bad: #ff8b82; --bad-bg: #46201d; --info: #84b9f6; --info-bg: #162a42;
       --neutral: #9ba0b8; --neutral-bg: #262939;
       --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 28px rgba(0, 0, 0, .35);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
+  body { margin: 0; background-color: var(--bg); background-image: var(--bgart); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat; color: var(--text);
          font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
-  .hero { position: relative; background: linear-gradient(135deg, var(--hero-from), var(--hero-to)); color: #fff; padding: 30px 0 72px; }
+  .hero { position: relative; background: var(--hero-bg); color: #fff; padding: 30px 0 72px; }
   .hero { text-align: center; }
-  .hero .logos { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .hero .logos { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0 0 16px; flex-wrap: wrap; }
   .hero .chip { display: grid; place-items: center; height: 46px; padding: 0 14px; border-radius: 10px;
                 background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .22); }
   .hero .chip img[alt="Asendia"] { height: 34px; border-radius: 4px; }
@@ -53,7 +59,7 @@
     .grid { grid-template-columns: 1fr; }
     .col-side { position: static; max-height: none; }
   }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+  .panel { -webkit-backdrop-filter: var(--panel-blur); backdrop-filter: var(--panel-blur); background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
   textarea { width: 100%; min-height: 104px; resize: vertical; padding: 12px; border-radius: 10px;
              border: 1px solid var(--line); background: var(--field); color: var(--text);
              font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
@@ -212,13 +218,13 @@
 <header class="hero">
   <button type="button" class="themebtn" id="themeBtn" aria-label="Temayı değiştir">Tema</button>
   <div class="wrap">
-    <h1>APC &amp; ASENDİA &amp; SAGAWA KARGO TAKİP</h1>
-    <p>APC, Asendia veya Sagawa gönderilerini bağlantı ya da takip numarası ile sorgulayabilirsiniz. Kargo firması otomatik olarak tespit edilir.</p>
     <div class="logos" aria-hidden="true">
       <span class="chip"><img src="/logos/apc.png" alt="APC"></span>
       <span class="chip"><img src="/logos/asendia.png" alt="Asendia"></span>
       <span class="chip"><img src="/logos/sagawa.png" alt="Sagawa"></span>
     </div>
+    <h1>APC &amp; ASENDİA &amp; SAGAWA KARGO TAKİP</h1>
+    <p>APC, Asendia veya Sagawa gönderilerini bağlantı ya da takip numarası ile sorgulayabilirsiniz. Kargo firması otomatik olarak tespit edilir.</p>
   </div>
 </header>
 

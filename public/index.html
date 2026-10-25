@@ -135,6 +135,8 @@
   .last .orig { margin-top: 6px; font-size: 12px; color: var(--muted); font-style: italic; }
   .last .lastmsg { font-size: 18px; font-weight: 700; line-height: 1.3; }
   .msgbox { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--field); border-left: 4px solid var(--accent); }
+  .msgbox .msghead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .msgbox .msghead .label { margin: 0; }
   .msgbox .label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
   .msgbox textarea { min-height: 150px; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--card); }
   .evwrap { position: relative; margin-top: 12px; }
@@ -211,7 +213,7 @@
   <button type="button" class="themebtn" id="themeBtn" aria-label="Temayı değiştir">Tema</button>
   <div class="wrap">
     <h1>APC &amp; ASENDİA &amp; SAGAWA KARGO TAKİP</h1>
-    <p>APC, Asendia ya da Sagawa linkini veya takip numarasını yapıştır. Hangisi olduğunu kendim anlarım.</p>
+    <p>APC, Asendia veya Sagawa gönderilerini bağlantı ya da takip numarası ile sorgulayabilirsiniz. Kargo firması otomatik olarak tespit edilir.</p>
     <div class="logos" aria-hidden="true">
       <span class="chip"><img src="/logos/apc.png" alt="APC"></span>
       <span class="chip"><img src="/logos/asendia.png" alt="Asendia"></span>
@@ -223,12 +225,12 @@
 <main class="wrap grid">
   <section class="col-main">
     <div class="panel">
-      <label for="input" class="hint">Her satıra bir link veya numara (en fazla 50)</label>
+      <label for="input" class="hint">Her satıra bir bağlantı veya takip numarası giriniz (en fazla 50)</label>
       <textarea id="input" spellcheck="false" placeholder="https://tracking.apc-pli.com/18391P1008260002682920&#10;AS015144682US"></textarea>
       <div class="row">
         <button id="go" class="primary" type="button">Sorgula</button>
         <button id="clear" type="button">Temizle</button>
-        <span class="hint">Ctrl + Enter ile de sorgulayabilirsin.</span>
+        <span class="hint">Ctrl + Enter ile de sorgulama yapabilirsiniz.</span>
       </div>
     </div>
 
@@ -242,7 +244,7 @@
   <aside class="col-side">
     <div class="panel asst" id="asst">
       <h2>Asistan</h2>
-      <p class="hint">Geçmiş kontrollerdeki kargolar hakkında sor: kaç tanesi gecikmede, hangileri teslim edildi gibi.</p>
+      <p class="hint">Geçmiş kontrollerdeki kargolara ilişkin sorularınızı iletebilirsiniz; örneğin kaç kargonun gecikmeli olduğu veya hangilerinin teslim edildiği.</p>
       <div class="asst-chips" id="asstChips"></div>
       <form id="asstForm" autocomplete="off">
         <input id="asstQ" type="text" placeholder="Örn: kaç kargo gecikmede?" maxlength="200" aria-label="Asistana soru sor">
@@ -273,7 +275,7 @@
         <button id="xlsBtn" type="button">Excel indir</button>
       </div>
       <div class="hist-filter">
-        <input id="histSearch" type="search" placeholder="Ara: numara, carrier, yer, durum…" maxlength="80" aria-label="Geçmişte ara">
+        <input id="histSearch" type="search" placeholder="Ara: takip no, kargo firması, konum, durum…" maxlength="80" aria-label="Geçmişte ara">
         <div class="hf-row">
           <select id="histSort" aria-label="Sırala">
             <option value="recent">Sırala: Son sorgulanan</option>
@@ -505,9 +507,7 @@
 
     var body;
     if (verdict === 'delivered' || r.delivered) {
-      body = num + ' takip numaralı gönderiniz ' + lastWhen + ' tarihinde' + lastPlace + ' teslim edilmiş görünüyor. ' +
-        'Teslimat adresinizi ve çevrenizi (kapı görevlisi, komşu, güvenlik vb.) kontrol etmenizi rica ederiz. ' +
-        'Kargo size ulaşmadıysa lütfen bize bildirin, hemen ilgilenelim.';
+      body = num + ' takip numaralı gönderiniz ' + lastWhen + ' tarihinde' + lastPlace + ' teslim edilmiş görünüyor.';
     } else if (verdict === 'returned') {
       var rt = an.returned ? day(an.returned.time) : lastWhen;
       var rbd = an.returned ? businessDaysSince(an.returned.time) : null;
@@ -516,8 +516,7 @@
         'Konuyu inceliyoruz ve size en kısa sürede bilgi vereceğiz.';
     } else if (verdict === 'attention') {
       body = num + ' takip numaralı gönderiniz için kargo firması teslimat denemesi yapmış, ancak teslim edilememiş görünüyor. ' +
-        (last ? 'Son durum: ' + lastTxt + ' (' + lastWhen + lastPlace + '). ' : '') +
-        'Teslimat sırasında adreste ve telefonla ulaşılabilir olmanızı rica ederiz.';
+        (last ? 'Son durum: ' + lastTxt + ' (' + lastWhen + lastPlace + ').' : '');
     } else if (verdict === 'delayed') {
       var reasons = [];
       var dd = liveDelayDays(r);
@@ -548,12 +547,12 @@
   function msgBox(r) {
     var box = el('div', 'msgbox');
     box.hidden = true;
-    var lab = el('div', 'label', 'Müşteriye gönderilecek mesaj (düzenleyebilirsin)');
+    var head = el('div', 'msghead');
+    var lab = el('div', 'label', 'Müşteriye gönderilecek mesaj önerisi (düzenleyebilirsiniz)');
     var ta = el('textarea', 'msgtext');
     ta.rows = 9;
     ta.spellcheck = false;
-    var row = el('div', 'row');
-    var copy = el('button', 'primary', 'Kopyala');
+    var copy = el('button', 'primary', 'Mesajı kopyala');
     copy.type = 'button';
     var redo = el('button', null, 'Yeniden oluştur');
     redo.type = 'button';
@@ -561,12 +560,14 @@
     copy.addEventListener('click', function () {
       var done = function () { ok.textContent = 'Kopyalandı ✓'; setTimeout(function () { ok.textContent = ''; }, 2000); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); ok.textContent = 'Seçildi, Ctrl+C ile kopyala'; });
-      } else { ta.select(); ok.textContent = 'Seçildi, Ctrl+C ile kopyala'; }
+        navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); ok.textContent = 'Metin seçildi; Ctrl+C ile kopyalayabilirsiniz.'; });
+      } else { ta.select(); ok.textContent = 'Metin seçildi; Ctrl+C ile kopyalayabilirsiniz.'; }
     });
     redo.addEventListener('click', function () { ta.value = customerMessage(r); });
-    row.appendChild(copy); row.appendChild(redo); row.appendChild(ok);
-    box.appendChild(lab); box.appendChild(ta); box.appendChild(row);
+    head.appendChild(lab); head.appendChild(copy);
+    var row = el('div', 'row');
+    row.appendChild(redo); row.appendChild(ok);
+    box.appendChild(head); box.appendChild(ta); box.appendChild(row);
     box.fill = function () { if (!ta.value) ta.value = customerMessage(r); };
     return box;
   }
@@ -738,7 +739,7 @@
       if (failed) parts.push(failed + ' kargo kontrol edilemedi');
       var acts = entries.filter(function (e) { return e.changed; }).slice(0, 6).map(function (e) {
         var name = e.result && (e.result.packageNumber || e.result.id) || e.key;
-        return { label: 'Hareketi gör: ' + name, onClick: function () { showEntry(e.key); } };
+        return { label: 'Hareketi görüntüle: ' + name, onClick: function () { showEntry(e.key); } };
       });
       setNotice(parts.join(' · '), failed > 0 && failed === entries.length, acts);
     }
@@ -823,7 +824,7 @@
 
     if (r.last) {
       var last = el('div', 'last');
-      last.appendChild(el('div', 'label', 'Son güncelleme: ne demiş?'));
+      last.appendChild(el('div', 'label', 'Son hareketin açıklaması'));
       last.appendChild(el('div', 'lastmsg', dTr(r.last)));
       var loc = r.last.location ? ' · ' + r.last.location : '';
       last.appendChild(el('div', 'meta', when(r.last.time) + loc));
@@ -876,8 +877,8 @@
           var a = el('a', 'mono', num);
           a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
           a.title = r.localCarrierPrefilled
-            ? 'Carrier sayfası bu numarayla açılır'
-            : 'Carrier sayfası açılır, numarayı kopyalayıp oraya yapıştır';
+            ? 'Kargo firması sayfası bu numarayla açılır'
+            : 'Kargo firması sayfası açılır; numarayı kopyalayıp ilgili alana yapıştırabilirsiniz';
           span.appendChild(a);
         } else {
           span.appendChild(el('span', 'mono', num));
@@ -896,11 +897,11 @@
         if (u && !r.localCarrierPrefilled) {
           span.appendChild(document.createElement('br'));
           span.appendChild(el('span', 'meta',
-            'Bu carrier için numara linke otomatik eklenemiyor, sayfa açılınca numarayı yapıştır.'));
+            'Bu kargo firması için numara bağlantıya otomatik eklenemiyor; sayfa açıldığında numarayı ilgili alana yapıştırabilirsiniz.'));
         }
       } else if (u) {
         span.appendChild(document.createTextNode(' · '));
-        var a2 = el('a', null, 'carrier sitesinde aç');
+        var a2 = el('a', null, 'kargo firması sitesinde aç');
         a2.href = u; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
         span.appendChild(a2);
       }
@@ -1089,7 +1090,7 @@
     if (r.last) sub += ' · ' + (r.delivered ? 'Teslim: ' : 'Son güncelleme: ') + agoText(businessDaysSince(r.last.time)).toLowerCase();
     main.appendChild(el('span', 'a-sub', sub));
     li.appendChild(main);
-    var b = el('button', 'mini', 'Gör');
+    var b = el('button', 'mini', 'Görüntüle');
     b.type = 'button';
     b.addEventListener('click', function () { showEntry(e.key); });
     li.appendChild(b);
@@ -1099,7 +1100,7 @@
   function asstAnswer(q) {
     var n = nrm(q);
     var items = asstItems();
-    if (!items.length) return { text: 'Geçmişte henüz kargo yok. Önce birkaç kargo sorgula, sonra buradan sorabilirsin.', rows: [] };
+    if (!items.length) return { text: 'Geçmişte henüz kayıtlı kargo bulunmuyor. Önce sorgulama yapmanız gerekmektedir.', rows: [] };
 
     // 1) Sorguda geçmişteki bir takip numarası varsa o kargoyu anlat
     var hit = null;
@@ -1186,8 +1187,8 @@
     out.replaceChildren();
     out.appendChild(el('div', 'a-q', 'Soru: ' + q + (tag ? ' · ' + tag : '')));
     if (a.text === null) {
-      out.appendChild(el('div', 'a-ans', 'Bunu anlayamadım.'));
-      out.appendChild(el('div', 'a-note', 'Şunlara benzer sorular sorabilirsin: "kaç kargo gecikmede?", "teslim edilenler", "Asendia gecikmede olanlar", "hareketsiz kalanlar", "iadeye dönenler", "en çok geciken", ya da bir takip numarası yaz.'));
+      out.appendChild(el('div', 'a-ans', 'Sorunuzu anlayamadım.'));
+      out.appendChild(el('div', 'a-note', 'Örnek sorular: "kaç kargo gecikmede?", "teslim edilenler", "Asendia gecikmede olanlar", "hareketsiz kalanlar", "iadeye dönenler", "en çok geciken", veya bir takip numarası yazabilirsiniz.'));
       if (a.note) out.appendChild(el('div', 'a-note', a.note));
       return;
     }
@@ -1248,21 +1249,21 @@
             asstShow(q, { text: data.answer, rows: rows }, 'yapay zeka');
             return;
           }
-          note = (data && data.error) ? data.error + ' Basit asistanla cevaplıyorum.' : 'Yapay zeka cevap vermedi, basit asistanla cevaplıyorum.';
+          note = (data && data.error) ? data.error + ' Yanıt, kural tabanlı asistan tarafından oluşturuldu.' : 'Yapay zeka yanıt vermedi; yanıt kural tabanlı asistan tarafından oluşturuldu.';
         }
       } catch (e) {
         if (my !== asstSeq) return;
-        note = 'Yapay zekaya ulaşılamadı, basit asistanla cevaplıyorum.';
+        note = 'Yapay zekaya ulaşılamadı; yanıt kural tabanlı asistan tarafından oluşturuldu.';
       }
     }
     var a = asstAnswer(q);
     if (aiState.available === false && !aiState.notified) {
       aiState.notified = true;
-      a.note = 'Not: Yapay zeka henüz açık değil (sunucuda ANTHROPIC_API_KEY ayarı yok), şimdilik basit asistan cevap veriyor.';
+      a.note = 'Not: Yapay zeka özelliği etkin değil (sunucuda ANTHROPIC_API_KEY ayarı bulunmuyor); yanıtlar şimdilik kural tabanlı asistan tarafından veriliyor.';
     } else if (note) {
       a.note = note;
     }
-    asstShow(q, a, a.text === null ? '' : 'basit asistan');
+    asstShow(q, a, a.text === null ? '' : 'kural tabanlı asistan');
   }
 
   (function initAssistant() {
@@ -1421,7 +1422,7 @@
   }
   $('xlsBtn').addEventListener('click', function () {
     var list = xlsSelect($('xlsScope').value);
-    if (!list.length) { setNotice('Bu seçimde aktarılacak kargo yok.', true); return; }
+    if (!list.length) { setNotice('Seçilen kapsamda aktarılacak kargo bulunmuyor.', true); return; }
     var blob = buildXlsx(list);
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1537,7 +1538,7 @@
   // ---------- Sorgulama ----------
   async function run() {
     var text = $('input').value.trim();
-    if (!text) { setNotice('Önce bir link veya numara yapıştır.', true); return; }
+    if (!text) { setNotice('Lütfen önce bir bağlantı veya takip numarası giriniz.', true); return; }
 
     $('go').disabled = true;
     setNotice('Sorgulanıyor…');
@@ -1563,7 +1564,7 @@
       refreshMain();
       renderHistory();
     } catch (e) {
-      setNotice(e instanceof TypeError ? 'Sunucuya ulaşılamadı. Uygulama çalışıyor mu?' : e.message, true);
+      setNotice(e instanceof TypeError ? 'Sunucuya ulaşılamadı. Lütfen uygulamanın çalıştığını kontrol ediniz.' : e.message, true);
     } finally {
       $('go').disabled = false;
     }

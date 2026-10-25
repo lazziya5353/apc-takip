@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APC &amp; Asendia &amp; Sagawa Kargo Takip</title>
+<title>APC &amp; Asendia &amp; Sagawa &amp; DAI Post Kargo Takip</title>
 <style>
   :root {
     --bg: #eef2f8; --card: #ffffff; --text: #14233f; --muted: #52618a; --line: #dde3ee; --field: #f6f8fc;
@@ -98,6 +98,8 @@
   a.btn.open.asendia:hover { filter: brightness(1.05); }
   a.btn.open.sagawa { background: #c8102e; border-color: #a50d26; color: #fff; box-shadow: 0 2px 6px rgba(160, 15, 40, .3); }
   a.btn.open.sagawa:hover { filter: brightness(1.1); }
+  a.btn.open.daipost { background: #0b7a75; border-color: #086460; color: #fff; box-shadow: 0 2px 6px rgba(8, 100, 96, .3); }
+  a.btn.open.daipost:hover { filter: brightness(1.1); }
   .provtag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; letter-spacing: .06em;
              text-transform: uppercase; background: #c8102e; color: #fff; flex: none; }
   .provtag.sm { padding: 1px 7px; font-size: 11px; }
@@ -213,6 +215,11 @@
   .delopt span { flex: 1; }
   .delopt b { color: var(--muted); font-weight: 700; }
   .delopt input { accent-color: var(--accent); }
+  .localbox { margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--field); }
+  .localbox .lhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .localbox .lmsg { margin-top: 6px; font-size: 16px; font-weight: 700; }
+  .localbox details { margin-top: 8px; }
+  .localbox a.btn { margin-top: 8px; }
   .rbar { margin: 8px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); -webkit-backdrop-filter: var(--panel-blur); backdrop-filter: var(--panel-blur); }
   .rbar[hidden] { display: none; }
   .rbar .rtop { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
@@ -263,7 +270,7 @@
       <span class="chip"><img src="/logos/sagawa.png" alt="Sagawa"></span>
     </div>
     <h1>APC &amp; ASENDİA &amp; SAGAWA KARGO TAKİP</h1>
-    <p>APC, Asendia veya Sagawa gönderilerini bağlantı ya da takip numarası ile sorgulayabilirsiniz. Kargo firması otomatik olarak tespit edilir.</p>
+    <p>APC, Asendia, Sagawa veya DAI Post gönderilerini bağlantı ya da takip numarası ile sorgulayabilirsiniz. Kargo firması otomatik olarak tespit edilir.</p>
   </div>
 </header>
 
@@ -349,6 +356,7 @@
             <option value="apc">APC</option>
             <option value="asendia">Asendia</option>
             <option value="sagawa">Sagawa</option>
+            <option value="daipost">DAI Post</option>
           </select>
         </div>
       </div>
@@ -538,11 +546,14 @@
     } else if (r.provider === 'sagawa') {
       url = 'https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=' + encodeURIComponent(r.id);
       label = "Sagawa'da aç ↗";
+    } else if (r.provider === 'daipost') {
+      url = 'https://daipost.com/track?tracknbr=' + encodeURIComponent(r.id);
+      label = "DAI Post'ta aç ↗";
     } else {
       url = 'https://tracking.apc-pli.com/' + encodeURIComponent(r.ref2 || r.id);
       label = "APC'de aç ↗";
     }
-    var a = el('a', 'btn open' + (r.provider === 'asendia' ? ' asendia' : (r.provider === 'sagawa' ? ' sagawa' : '')) + (mini ? ' mini' : ''), label);
+    var a = el('a', 'btn open' + (r.provider === 'asendia' ? ' asendia' : (r.provider === 'sagawa' ? ' sagawa' : (r.provider === 'daipost' ? ' daipost' : ''))) + (mini ? ' mini' : ''), label);
     a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
     return a;
   }
@@ -598,6 +609,10 @@
         'Kayıtları düzenli olarak kontrol ediyoruz, yeni bilgi geldiğinde sizi bilgilendireceğiz.';
     }
     P.push(body);
+    if (r.local && r.local.ok && r.local.last && !r.delivered) {
+      P.push('Yerel kargo firması (' + r.local.name + ') son durum: "' + dTr(r.local.last).replace(/\.$/, '') + '" (' + day(r.local.last.time) +
+        (r.local.last.location ? ', ' + r.local.last.location : '') + ').');
+    }
     if (r.localCarrier && r.localTrackingNumber && r.localTrackingNumber !== num) {
       P.push('Kargo firması takip numarası: ' + r.localCarrier + ' - ' + r.localTrackingNumber);
     }
@@ -712,7 +727,11 @@
     if (an.returned) out.push('İadeye dönüş: ' + dayOnly(an.returned.time) + ' (' + agoText(businessDaysSince(an.returned.time)).toLowerCase() + ').');
     return out;
   }
-  function sig(r) { return r && r.last ? r.last.time + '|' + r.last.description : ''; }
+  function sig(r) {
+    var a = r && r.last ? r.last.time + '|' + r.last.description : '';
+    var b = r && r.local && r.local.last ? r.local.last.time + '|' + r.local.last.description : '';
+    return a + '#' + b;
+  }
 
   // Yeni sorgu: kayıt en üste taşınır. Daha önce varsa "yeni hareket" işareti sıfırlanır.
   function addToHistory(r, checkedAt) {
@@ -887,6 +906,51 @@
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
 
+
+  // ---------- Yerel kargo (ör. DAI Post) durumu: asıl kargonun içinde ----------
+  function localBox(l) {
+    var box = el('div', 'localbox');
+    var head = el('div', 'lhead');
+    head.appendChild(el('span', 'label', 'Yerel kargo durumu · ' + l.name));
+    if (l.ok) {
+      var v = VERDICTS[l.verdict] || VERDICTS.unknown;
+      head.appendChild(el('span', 'badge ' + v[1], v[0]));
+    }
+    box.appendChild(head);
+    box.appendChild(el('div', 'meta', l.name + ' takip no: ' + l.number));
+    if (!l.ok) {
+      box.appendChild(el('div', 'lmsg', l.notFound ? l.name + ' sisteminde bu numara için henüz kayıt görünmüyor.' : l.error));
+      return box;
+    }
+    if (l.last) {
+      box.appendChild(el('div', 'lmsg', dTr(l.last)));
+      box.appendChild(el('div', 'meta', when(l.last.time) + (l.last.location ? ' · ' + l.last.location : '') +
+        ' · ' + agoText(businessDaysSince(l.last.time))));
+    }
+    if (l.estFrom && !l.delivered) {
+      box.appendChild(el('div', 'meta', 'Tahmini teslimat: ' + day(l.estFrom) + (l.estTo && day(l.estTo) !== day(l.estFrom) ? ' - ' + day(l.estTo) : '')));
+    }
+    if (l.events && l.events.length > 1) {
+      var det = el('details');
+      det.appendChild(el('summary', null, l.name + ' hareketleri (' + l.events.length + ')'));
+      var ol = el('ol');
+      l.events.forEach(function (e) {
+        var li = el('li', 'ev');
+        li.appendChild(el('div', null, dTr(e)));
+        li.appendChild(el('div', 't', when(e.time) + (e.location ? ' · ' + e.location : '')));
+        ol.appendChild(li);
+      });
+      det.appendChild(ol);
+      box.appendChild(det);
+    }
+    if (l.url) {
+      var a = el('a', 'btn mini', l.name + "'ta aç ↗");
+      a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      box.appendChild(a);
+    }
+    return box;
+  }
+
   // ---------- Kart çizimi ----------
   function render(r, opts) {
     opts = opts || {};
@@ -966,6 +1030,8 @@
       if (orig.length) last.appendChild(el('div', 'orig', 'Orijinal: ' + orig.join(' ')));
       body.appendChild(last);
     }
+
+    if (r.local) body.appendChild(localBox(r.local));
 
     if (an.points.length) {
       var ul = el('ul', 'points');
@@ -1208,7 +1274,7 @@
     { id: 'ontrack', re: /yolda|sorunsuz|normal|problemsiz/, label: 'sorunsuz yolda', test: function (r) { return verdictOf(r) === 'ontrack'; } },
     { id: 'attention', re: /dikkat/, label: 'dikkat gerektiriyor', test: function (r) { return verdictOf(r) === 'attention'; } },
   ];
-  var ASST_PROVIDERS = [['apc', 'APC'], ['asendia', 'Asendia'], ['sagawa', 'Sagawa']];
+  var ASST_PROVIDERS = [['apc', 'APC'], ['asendia', 'Asendia'], ['sagawa', 'Sagawa'], ['daipost', 'DAI Post']];
 
   function asstRow(e) {
     var r = e.result;
@@ -1507,7 +1573,7 @@
     'Alıcı', 'Hizmet', 'Referans', 'Kargo firması', 'Kargo firması takip no', 'Uyarı', 'Son kontrol'];
   function xlsRow(e) {
     var r = e.result, l = r.last;
-    var provName = ({ apc: 'APC', asendia: 'Asendia', sagawa: 'Sagawa' })[r.provider] || r.providerName || r.provider || '';
+    var provName = ({ apc: 'APC', asendia: 'Asendia', sagawa: 'Sagawa', daipost: 'DAI Post' })[r.provider] || r.providerName || r.provider || '';
     var bd = l && !r.delivered ? businessDaysSince(l.time) : '';
     return [
       r.packageNumber || r.id || e.queryId || '', provName, VERDICTS[verdictOf(r)][0],
@@ -1619,6 +1685,7 @@
       var bits = [];
       if (r.localCarrier) bits.push(r.localCarrier);
       if (r.last) bits.push(dTr(r.last));
+      if (r.local && r.local.ok && r.local.last) bits.push('Yerel (' + r.local.name + '): ' + dTr(r.local.last) + ' (' + day(r.local.last.time) + ')');
       bits.push('Son kontrol: ' + when(e.checkedAt));
       main.appendChild(el('span', 'h-meta', bits.join(' · ')));
       main.addEventListener('click', function () { showEntry(e.key); });
@@ -1654,6 +1721,9 @@
       if (an.returned) {
         lines.push('  İadeye döndü: ' + when(an.returned.time) + ' — ' +
           agoText(businessDaysSince(an.returned.time)));
+      }
+      if (r.local && r.local.ok && r.local.last) {
+        lines.push('  Yerel kargo (' + r.local.name + ') son durum: ' + dTr(r.local.last) + ' — ' + when(r.local.last.time));
       }
       if (r.localCarrier) {
         lines.push('  Local carrier: ' + r.localCarrier +

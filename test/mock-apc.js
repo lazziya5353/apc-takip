@@ -5,6 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const asen = fs.readFileSync(path.join(__dirname, 'fixture-asendia.json'), 'utf8');
 const sag = fs.readFileSync(path.join(__dirname, 'fixture-sagawa.html'), 'utf8');
+const asenDai = JSON.stringify(Object.assign(JSON.parse(asen), {})).replace(/https:\/\/tracking\.dpd\.pt\/track-and-trace/g, 'https://daipost.com/track?tracknbr=00393580940174033739').replace(/"trackingNumberVendor":"[^"]*"/, '"trackingNumberVendor":"00393580940174033739"');
+const dai = fs.readFileSync(path.join(__dirname, 'fixture-daipost.html'), 'utf8');
+const daiNo = fs.readFileSync(path.join(__dirname, 'fixture-daipost-yok.html'), 'utf8');
 const body = fs.readFileSync(path.join(__dirname, 'fixture.json'), 'utf8');
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
@@ -12,13 +15,17 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(body);
   }
-  if (u.pathname === '/api/A1/TrackingBranded/Tracking' && u.searchParams.get('trackingNumber') === 'AS015144682US' && u.searchParams.get('trackingKey')) {
+  if (u.pathname === '/api/A1/TrackingBranded/Tracking' && (u.searchParams.get('trackingNumber') === 'AS015144682US' || u.searchParams.get('trackingNumber') === 'AS015391233US') && u.searchParams.get('trackingKey')) {
     res.writeHead(200, { 'content-type': 'application/json' });
-    return res.end(asen);
+    return res.end(u.searchParams.get('trackingNumber') === 'AS015391233US' ? asenDai : asen);
   }
   if (u.pathname === '/sgx/trackeng.asp') {
     res.writeHead(200, { 'content-type': 'text/html' });
     return res.end(u.searchParams.get('awb') === '564652084194' ? sag : '<html><body>Sagawa Global Tracking<table><tr><td>DATE TIME</td><td>STATUS</td><td>COUNTRY</td></tr></table></body></html>');
+  }
+  if (u.pathname === '/track') {
+    res.writeHead(200, { 'content-type': 'text/html' });
+    return res.end(u.searchParams.get('tracknbr') === '00393580940174033739' ? dai : daiNo);
   }
   res.writeHead(404); res.end();
 }).listen(4010, '127.0.0.1');

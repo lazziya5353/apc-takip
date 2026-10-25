@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 process.env.APC_BASE = 'http://127.0.0.1:4010';
 process.env.ASENDIA_BASE = 'http://127.0.0.1:4010';
 process.env.SAGAWA_BASE = 'http://127.0.0.1:4010';
+process.env.DAIPOST_BASE = 'http://127.0.0.1:4010';
 const { parseInput, handleLookup } = require('../lib/apc');
 
 (async () => {
@@ -148,7 +149,7 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(as.events.find((e) => e.description === 'Delayed In Transit').category, 'Delayed');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
-  assert.match(asMiss.error, /APC, Asendia ve Sagawa/);
+  assert.match(asMiss.error, /APC, Asendia, Sagawa ve DAI Post/);
 
   // Sagawa: link ya da 12 haneli numara
   const ps = parseInput('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=564652084194');
@@ -169,9 +170,38 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(sg.last.descriptionTr, 'Teslim edildi (imza/kaşe ile).');
   const sgLink = (await handleLookup('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?awb=564652084194')).body.results[0];
   assert.equal(sgLink.provider, 'sagawa');
+  // DAI Post: link ya da 20 haneli numara
+  const pd = parseInput('https://daipost.com/track?tracknbr=00393580940174033739');
+  assert.deepEqual(pd.ids, ['00393580940174033739']);
+  assert.equal(pd.hints['00393580940174033739'], 'daipost');
+  const dp = (await handleLookup('00393580940174033739')).body.results[0];
+  assert.equal(dp.ok, true);
+  assert.equal(dp.provider, 'daipost');
+  assert.equal(dp.providerName, 'DAI Post');
+  assert.equal(dp.events.length, 15);
+  assert.equal(dp.last.category, 'Delivery Attempted');           // en yeni olay: bırakılamadı
+  assert.equal(dp.last.descriptionTr, 'Paket güvenli şekilde bırakılamadı; teslim alma şekli hakkında bilgi verilecek.');
+  assert.equal(dp.events.every((e) => e.descriptionTr), true);    // tüm olaylar Türkçeye çevrildi
+  assert.equal(dp.delivered, false);
+  assert.equal(dp.estTo.slice(0, 10), '2026-10-13');
+  assert.equal(dp.localCarrierUrl, 'https://daipost.com/track?tracknbr=00393580940174033739');
+  assert.equal((await handleLookup('00393580940174033700')).body.results[0].notFound, true);
+
+  // Asendia kargosunun yerel kargosu DAI Post ise yerel durum da eklenir
+  const al = (await handleLookup('AS015391233US')).body.results[0];
+  assert.equal(al.provider, 'asendia');
+  assert.equal(al.localCarrier, 'DAI Post');
+  assert.equal(al.localTrackingNumber, '00393580940174033739');
+  assert.ok(al.local && al.local.ok, 'yerel bilgi eklenmeli');
+  assert.equal(al.local.name, 'DAI Post');
+  assert.equal(al.local.events.length, 15);
+  assert.equal(al.local.last.category, 'Delivery Attempted');
+  assert.equal(al.local.url, 'https://daipost.com/track?tracknbr=00393580940174033739');
+  assert.equal(as.local, undefined);   // DPD gibi desteklenmeyen yerel kargoda eklenmez
+
   const none = (await handleLookup('999999999999')).body.results[0];
   assert.equal(none.ok, false);
-  assert.match(none.error, /APC, Asendia ve Sagawa/);
+  assert.match(none.error, /APC, Asendia, Sagawa ve DAI Post/);
 
   // Türkçe çeviri
   assert.equal(a.last.descriptionTr, 'Gecikme var.');

@@ -38,6 +38,9 @@ ayrı bir API'si yok, sonuç sayfanın HTML'inde geliyor; `lib/sagawa.js` o tabl
 Tablodaki saatler yerel saattir, hareketin ülkesine göre saat dilimi seçilir. 12 haneli numara
 APC'nin yerel carrier numarası da olabilir, bu yüzden APC ve Sagawa sırayla denenir.
 
+## DAI Post
+DAI Post'un (daipost.com) API'si yok. Takip sayfası sunucuda çizilir ve sonuç sayfanın içine gömülü JSON olarak gelir. `lib/daipost.js` o veriyi çıkarır. Numara ya da `https://daipost.com/track?tracknbr=...` linki yapıştırılabilir. 20 haneli numaralar önce DAI Post'ta aranır. Olay saatleri olayın yapıldığı ülkenin yerel saatidir, ülkeye göre çevrilir. Asendia (ya da APC) sonucunda yerel kargo DAI Post ise, yerel kargonun son durumu da otomatik çekilir ve kartta "Yerel kargo durumu" kutusunda, geçmiş listesinde ve müşteri mesajında gösterilir. Test için `DAIPOST_BASE` ile sahte sunucu kullanılabilir. Sayfa yapısı değişirse "takip verisi bulamadı" uyarısı çıkar.
+
 ## Asistan
 
 Sağ üstteki Asistan kutusu geçmiş kontrollerdeki kargolar hakkındaki soruları cevaplar.

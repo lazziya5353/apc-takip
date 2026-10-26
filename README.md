@@ -168,3 +168,7 @@ Correos'un takip sayfası anahtar istemeyen herkese açık bir JSON adresi kulla
 - `correos.es` linki ya da `PK…` gibi numara yapıştırılabilir. APC/Asendia sonucunda yerel kargo Correos ise yerel durum kutusu otomatik eklenir.
 - Olay saatleri İspanya saatidir (`Europe/Madrid`), buna göre çevrilir.
 - Bu adres resmi bir API değildir; Correos değiştirebilir ya da sunucu IP'lerini engelleyebilir. Adres `CORREOS_BASE` ile değiştirilebilir.
+
+## Çeviri
+
+Hareket metinleri `lib/translate.js` içindeki kalıp listesiyle Türkçeye çevrilir. Listede olmayan İngilizce metinler, `ANTHROPIC_API_KEY` tanımlıysa (asistanın kullandığı anahtar) tek istekte yapay zekayla çevrilir ve bellekte saklanır. Model `TRANSLATE_MODEL` ile değiştirilebilir. Anahtar yoksa ya da istek başarısız olursa metin İngilizce kalır, sonuç bozulmaz.

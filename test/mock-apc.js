@@ -16,7 +16,8 @@ const corNo = fs.readFileSync(path.join(__dirname, 'fixture-correos-yok.json'), 
 const body = fs.readFileSync(path.join(__dirname, 'fixture.json'), 'utf8');
 const apcHound = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'HX61222011201046803', carrierTrackingNumber: 'HX61222011201046803', finalMileCarrier: 'Hound Express', externalTrackingUrl: null }));
 const apcCor = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'PK43BG0445921910107141Q', carrierTrackingNumber: 'PK43BG0445921910107141Q', finalMileCarrier: 'Correos', externalTrackingUrl: null }));
-const apcDai = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: '00393580940174033739', carrierTrackingNumber: '00393580940174033739', finalMileCarrier: 'DAI', externalTrackingUrl: null }));
+const apcDaiBase = JSON.parse(body); apcDaiBase.events.forEach((e) => { e.carrierMetaDescription = 'Package received in transit facility'; });
+const apcDai = JSON.stringify(Object.assign(apcDaiBase, { packageNumber: '00393580940174033739', carrierTrackingNumber: '00393580940174033739', finalMileCarrier: 'DAI', externalTrackingUrl: null }));
 const apcLa = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'LX110028346NL', carrierTrackingNumber: 'LX110028346NL', finalMileCarrier: 'La Poste', externalTrackingUrl: 'https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL' }));
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');

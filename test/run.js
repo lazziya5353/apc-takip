@@ -5,6 +5,8 @@ process.env.ASENDIA_BASE = 'http://127.0.0.1:4010';
 process.env.SAGAWA_BASE = 'http://127.0.0.1:4010';
 process.env.DAIPOST_BASE = 'http://127.0.0.1:4010';
 process.env.LAPOSTE_BASE = 'http://127.0.0.1:4010';
+process.env.HOUND_BASE = 'http://127.0.0.1:4010';
+process.env.HOUND_PARTNER_KEY = 'test-key';
 const { parseInput, handleLookup } = require('../lib/apc');
 
 (async () => {
@@ -89,8 +91,8 @@ const { parseInput, handleLookup } = require('../lib/apc');
   // Local takip no ve carrier linki
   const { carrierLink } = require('../lib/apc');
   assert.equal(a.localTrackingNumber, 'HX61222041201040241');
-  assert.equal(a.localCarrierPrefilled, false); // Hound Express için numaralı kalıp bilmiyoruz
-  assert.equal(a.localCarrierUrl, 'https://www.hound-express.com/tracking-en.html');
+  assert.equal(a.localCarrierPrefilled, false); // Hound sayfası numarayı kutuya doldurmuyor
+  assert.equal(a.localCarrierUrl, 'https://www.hound-express.com/tracking.html?rastero=HX61222041201040241');
   const rm = carrierLink('Royal Mail', 'GV370207019GB', 'https://www.royalmail.com/');
   assert.equal(rm.url, 'https://www.royalmail.com/track-your-item#/tracking-results/GV370207019GB');
   assert.equal(rm.prefilled, true);
@@ -150,7 +152,7 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(as.events.find((e) => e.description === 'Delayed In Transit').category, 'Delayed');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
-  assert.match(asMiss.error, /APC, Asendia, Sagawa, DAI Post ve La Poste/);
+  assert.match(asMiss.error, /APC, Asendia, Sagawa, DAI Post, La Poste ve Hound Express/);
 
   // Sagawa: link ya da 12 haneli numara
   const ps = parseInput('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=564652084194');
@@ -216,12 +218,21 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(al2.local.name, 'La Poste');
   assert.equal(al2.local.events.length, 8);
   assert.equal(al2.local.last.category, 'Delayed');
+  const ah = (await handleLookup('18391P1019260002799999')).body.results[0];
+  assert.equal(ah.localCarrier, 'Hound Express');
+  assert.ok(ah.local && ah.local.ok, 'Hound Express yerel bilgisi eklenmeli');
+  assert.equal(ah.local.events.length, 2);
+  assert.equal(ah.local.last.descriptionTr, 'Gönderinin ön bildirimi alındı, uçuş ve varış takip ediliyor.');
+  assert.equal(ah.local.last.time.slice(0, 10), '2026-10-21');
+  assert.equal(JSON.stringify(ah).includes('VILLALOBOS'), false);
+  const hd = (await handleLookup('https://www.hound-express.com/tracking.html?rastero=HX61222011201046803')).body.results[0];
+  assert.equal(hd.provider, 'hound');
   const lpLink = parseInput('https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL');
   assert.equal(lpLink.hints['LX110028346NL'], 'laposte');
 
   const none = (await handleLookup('999999999999')).body.results[0];
   assert.equal(none.ok, false);
-  assert.match(none.error, /APC, Asendia, Sagawa, DAI Post ve La Poste/);
+  assert.match(none.error, /APC, Asendia, Sagawa, DAI Post, La Poste ve Hound Express/);
 
   // Türkçe çeviri
   assert.equal(a.last.descriptionTr, 'Gecikme var.');

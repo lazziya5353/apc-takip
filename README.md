@@ -151,3 +151,11 @@ La Poste'un takip sayfası anahtar istemeyen herkese açık bir JSON adresi kull
 - Çubuğa tıklanınca o kargo açılır ve çubuk listeden kalkar, diğer çubuklar yerinde durur.
 - Fare çubuğun üzerine gelince sağda ✕ çıkar, tıklanınca yalnızca o çubuk kapanır.
 - "Hepsini kaldır" tüm çubukları tek seferde kapatır.
+
+## Hound Express
+
+Hound Express takip servisi (`ws_pods.hound-express.com`, POST `/Sabueso/ws/deliveryServices/trackOrder`) bir `partnerKey` başlığı ister.
+- Anahtarı **Netlify ortam değişkeni** olarak ekleyin: `HOUND_PARTNER_KEY`. Kodda ya da GitHub'da tutulmaz. Anahtar yoksa Hound sorgusu yapılmaz, uygulamanın geri kalanı etkilenmez.
+- `hound-express.com/tracking.html?rastero=...` linki ya da `HX...` numarası yapıştırılabilir. APC sonucunda yerel kargo Hound Express ise yerel durum kutusu otomatik eklenir.
+- Yanıtta alıcının adı, adresi, telefonu ve vergi numarası da bulunur. Uygulama bunlara dokunmaz, yalnızca durum olaylarını alır.
+- Olay saatleri saat dilimi içermez. Meksika saati (`America/Mexico_City`) varsayılır, gerekirse `HOUND_TZ` ile değiştirilir.

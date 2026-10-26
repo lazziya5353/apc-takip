@@ -237,6 +237,13 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(ac.localCarrierPrefilled, true);
   const cd = (await handleLookup('https://www.correos.es/es/en/tools/tracker/items/details?tracking-number=PK43BG0445921910107141Q')).body.results[0];
   assert.equal(cd.provider, 'correos');
+  const adai = (await handleLookup('18391P0922260002521743')).body.results[0];
+  assert.equal(adai.localCarrier, 'DAI');
+  assert.ok(adai.local && adai.local.ok, 'DAI yerel bilgisi eklenmeli');
+  assert.equal(adai.local.name, 'DAI Post');
+  const { carrierLink: cl2 } = require('../lib/apc');
+  assert.equal(cl2('DAI', '00393580940183676910', null).url, 'https://daipost.com/track?tracknbr=00393580940183676910');
+  assert.equal(cl2('DAI', '1', null).prefilled, true);
   const lpLink = parseInput('https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL');
   assert.equal(lpLink.hints['LX110028346NL'], 'laposte');
 

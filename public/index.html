@@ -524,6 +524,15 @@
       var raw = window.localStorage.getItem(STORE_KEY);
       var arr = raw ? JSON.parse(raw) : [];
       history = Array.isArray(arr) ? arr.filter(isEntry) : [];
+      // Eskiden aynı kargodan çift kayıt oluştuysa en yenisi kalır (liste yeniden eskiye sıralı)
+      var kept = [], seen = [];
+      history.forEach(function (e) {
+        var ids = idsOfEntry(e);
+        if (sharesId(ids, seen)) return;
+        kept.push(e);
+        ids.forEach(function (x) { seen.push(x); });
+      });
+      history = kept;
     } catch (e) { history = []; storageOk = false; }
   }
   // Kayıt sayısında sınır yok. Tarayıcı kotası dolarsa önce hareket listeleri kısaltılarak
@@ -766,10 +775,24 @@
   }
 
   // Yeni sorgu: kayıt en üste taşınır. Daha önce varsa "yeni hareket" işareti sıfırlanır.
+  // Aynı kargo farklı şekilde yazılsa da (büyük/küçük harf, link, yerel numara) tek kayıt sayılır:
+  // kaydın numaralarından biri bile eşleşirse eski kayıt kaldırılır, yenisi en üste konur.
+  function normId(x) { return String(x == null ? '' : x).replace(/\s+/g, '').toUpperCase(); }
+  function idsOfEntry(e) {
+    var r = e.result || {};
+    return [e.key, e.queryId, r.id, r.packageNumber].map(normId).filter(Boolean);
+  }
+  function idsOfResult(r) {
+    return [keyOf(r), r.id, r.packageNumber].map(normId).filter(Boolean);
+  }
+  function sharesId(a, b) {
+    for (var i = 0; i < a.length; i++) if (b.indexOf(a[i]) !== -1) return true;
+    return false;
+  }
   function addToHistory(r, checkedAt) {
     var key = keyOf(r);
-    var old = findEntry(key);
-    if (old) history.splice(history.indexOf(old), 1);
+    var mine = idsOfResult(r);
+    history = history.filter(function (e) { return !sharesId(idsOfEntry(e), mine); });
     var entry = { key: key, queryId: r.id, checkedAt: checkedAt, changed: false, error: null, result: r };
     history.unshift(entry);
     return entry;

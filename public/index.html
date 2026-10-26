@@ -120,6 +120,14 @@
   .langsw button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .langsw svg { display: block; width: 24px; height: 16px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
   @media (max-width: 760px) { .hero { padding-top: 62px; } }
+  .clocks { position: absolute; top: 14px; left: 16px; display: flex; gap: 8px; }
+  .clk { display: flex; flex-direction: column; align-items: center; line-height: 1.15; padding: 4px 12px; border-radius: 12px;
+         background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: #fff; }
+  .clk small { display: flex; align-items: center; gap: 5px; font-size: 10.5px; letter-spacing: .06em; opacity: .85; font-weight: 700; }
+  .clk small svg { width: 15px; height: 10px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+  .clk b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .clk i { font-style: normal; font-size: 10.5px; opacity: .8; }
+  @media (max-width: 760px) { .clocks { position: static; justify-content: center; margin: -8px 0 14px; } }
   .trl { margin-top: 5px; padding-left: 10px; border-left: 3px solid #c9d6f5; font-size: 14px; line-height: 1.4; color: #3a4a73; font-weight: 400; }
   :root[data-theme="dark"] .trl { color: #b9c6e8; border-left-color: #3b4f86; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .trl { color: #b9c6e8; border-left-color: #3b4f86; } }
@@ -295,6 +303,7 @@
 </head>
 <body>
 <header class="hero">
+  <div class="clocks" id="clocks" aria-label="Saat"></div>
   <div class="topbar">
     <button type="button" class="themebtn" id="themeBtn" aria-label="Temayı değiştir">Tema</button>
     <div class="langsw" role="group" aria-label="Dil / Language">
@@ -2047,10 +2056,36 @@
     } catch (e) { setNotice('Kopyalanamadı.', true); }
   });
 
+
+  // ---------- Saatler: İstanbul ve New Jersey (yaz/kış saati otomatik) ----------
+  var CLOCK_FLAGS = { tr: '<svg viewBox="0 0 1200 800" aria-hidden="true" focusable="false"><rect width="1200" height="800" fill="#e30a17"/><circle cx="400" cy="400" r="200" fill="#fff"/><circle cx="450" cy="400" r="160" fill="#e30a17"/><polygon fill="#fff" points="483.33,400.00 552.43,377.55 552.43,304.89 595.14,363.67 664.23,341.22 621.53,400.00 664.23,458.78 595.14,436.33 552.43,495.11 552.43,422.45"/></svg>', us: '<svg viewBox="0 0 19 10" aria-hidden="true" focusable="false"><rect width="19" height="10" fill="#fff"/><rect y="0.0" width="19" height="0.77" fill="#b22234"/><rect y="1.54" width="19" height="0.77" fill="#b22234"/><rect y="3.08" width="19" height="0.77" fill="#b22234"/><rect y="4.62" width="19" height="0.77" fill="#b22234"/><rect y="6.16" width="19" height="0.77" fill="#b22234"/><rect y="7.7" width="19" height="0.77" fill="#b22234"/><rect y="9.24" width="19" height="0.77" fill="#b22234"/><rect width="7.6" height="5.38" fill="#3c3b6e"/></svg>' };
+  function renderClocks() {
+    var box = $('clocks');
+    if (!box) return;
+    var loc = LANG === 'en' ? 'en-GB' : 'tr-TR', now = new Date();
+    var zones = [
+      { tz: 'Europe/Istanbul', name: T('İSTANBUL', 'ISTANBUL'), flag: 'tr' },
+      { tz: 'America/New_York', name: 'NEW JERSEY', flag: 'us' }
+    ];
+    box.replaceChildren();
+    zones.forEach(function (z) {
+      var c = el('div', 'clk');
+      var sm = el('small');
+      sm.innerHTML = CLOCK_FLAGS[z.flag]; // sabit, kendi yazdığımız SVG
+      sm.appendChild(document.createTextNode(z.name));
+      c.appendChild(sm);
+      c.appendChild(el('b', null, new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: z.tz }).format(now)));
+      c.appendChild(el('i', null, new Intl.DateTimeFormat(loc, { weekday: 'short', day: 'numeric', month: 'short', timeZone: z.tz }).format(now)));
+      box.appendChild(c);
+    });
+  }
+  renderClocks();
+  setInterval(renderClocks, 15000);
+
   // ---------- Dil seçici: sabit sayfa metinlerini çevirir, seçim bu tarayıcıda hatırlanır ----------
   var staticTexts = new WeakMap();   // metin düğümü -> Türkçe orijinal
   var staticAttrs = [];              // [element, attr, Türkçe orijinal]
-  var DYNAMIC_IDS = { results: 1, review: 1, histList: 1, histStats: 1, asstOut: 1, asstChips: 1, notice: 1, rbar: 1, histCount: 1, histNote: 1 };
+  var DYNAMIC_IDS = { results: 1, review: 1, histList: 1, histStats: 1, asstOut: 1, asstChips: 1, notice: 1, rbar: 1, histCount: 1, histNote: 1, clocks: 1 };
   function collectStatic() {
     var roots = [document.querySelector('.hero'), document.querySelector('main')];
     roots.forEach(function (root) {
@@ -2100,6 +2135,7 @@
     LANG = l;
     try { window.localStorage.setItem(LANG_KEY, l); } catch (e) { /* kayıt yapılamazsa yalnızca bu açılışta geçerli */ }
     applyStatic();
+    renderClocks();
     paintLangButtons();
     if (typeof window.__themeLabel === 'function') window.__themeLabel();
     // Açık olan her şey seçilen dilde yeniden çizilir (kart, geçmiş, bildirim çubukları)

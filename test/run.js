@@ -5,6 +5,7 @@ process.env.ASENDIA_BASE = 'http://127.0.0.1:4010';
 process.env.SAGAWA_BASE = 'http://127.0.0.1:4010';
 process.env.DAIPOST_BASE = 'http://127.0.0.1:4010';
 process.env.LAPOSTE_BASE = 'http://127.0.0.1:4010';
+process.env.CORREOS_BASE = 'http://127.0.0.1:4010';
 process.env.HOUND_BASE = 'http://127.0.0.1:4010';
 process.env.HOUND_PARTNER_KEY = 'test-key';
 const { parseInput, handleLookup } = require('../lib/apc');
@@ -152,7 +153,7 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(as.events.find((e) => e.description === 'Delayed In Transit').category, 'Delayed');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
-  assert.match(asMiss.error, /APC, Asendia, Sagawa, DAI Post, La Poste ve Hound Express/);
+  assert.match(asMiss.error, /APC, Asendia, Sagawa, DAI Post, La Poste, Hound Express ve Correos/);
 
   // Sagawa: link ya da 12 haneli numara
   const ps = parseInput('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=564652084194');
@@ -227,12 +228,21 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(JSON.stringify(ah).includes('VILLALOBOS'), false);
   const hd = (await handleLookup('https://www.hound-express.com/tracking.html?rastero=HX61222011201046803')).body.results[0];
   assert.equal(hd.provider, 'hound');
+  const ac = (await handleLookup('18391P1005260002647147')).body.results[0];
+  assert.equal(ac.localCarrier, 'Correos');
+  assert.ok(ac.local && ac.local.ok, 'Correos yerel bilgisi eklenmeli');
+  assert.equal(ac.local.events.length, 9);
+  assert.equal(ac.local.last.category, 'Delivery Attempted');
+  assert.equal(ac.local.last.descriptionTr, 'Gönderi alıcının teslim almasını bekliyor.');
+  assert.equal(ac.localCarrierPrefilled, true);
+  const cd = (await handleLookup('https://www.correos.es/es/en/tools/tracker/items/details?tracking-number=PK43BG0445921910107141Q')).body.results[0];
+  assert.equal(cd.provider, 'correos');
   const lpLink = parseInput('https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL');
   assert.equal(lpLink.hints['LX110028346NL'], 'laposte');
 
   const none = (await handleLookup('999999999999')).body.results[0];
   assert.equal(none.ok, false);
-  assert.match(none.error, /APC, Asendia, Sagawa, DAI Post, La Poste ve Hound Express/);
+  assert.match(none.error, /APC, Asendia, Sagawa, DAI Post, La Poste, Hound Express ve Correos/);
 
   // Türkçe çeviri
   assert.equal(a.last.descriptionTr, 'Gecikme var.');

@@ -11,8 +11,11 @@ const daiNo = fs.readFileSync(path.join(__dirname, 'fixture-daipost-yok.html'), 
 const lap = fs.readFileSync(path.join(__dirname, 'fixture-laposte.json'), 'utf8');
 const lapNo = fs.readFileSync(path.join(__dirname, 'fixture-laposte-yok.json'), 'utf8');
 const hound = fs.readFileSync(path.join(__dirname, 'fixture-hound.json'), 'utf8');
+const cor = fs.readFileSync(path.join(__dirname, 'fixture-correos.json'), 'utf8');
+const corNo = fs.readFileSync(path.join(__dirname, 'fixture-correos-yok.json'), 'utf8');
 const body = fs.readFileSync(path.join(__dirname, 'fixture.json'), 'utf8');
 const apcHound = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'HX61222011201046803', carrierTrackingNumber: 'HX61222011201046803', finalMileCarrier: 'Hound Express', externalTrackingUrl: null }));
+const apcCor = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'PK43BG0445921910107141Q', carrierTrackingNumber: 'PK43BG0445921910107141Q', finalMileCarrier: 'Correos', externalTrackingUrl: null }));
 const apcLa = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'LX110028346NL', carrierTrackingNumber: 'LX110028346NL', finalMileCarrier: 'La Poste', externalTrackingUrl: 'https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL' }));
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
@@ -35,6 +38,14 @@ http.createServer((req, res) => {
   if (u.pathname === '/sgx/trackeng.asp') {
     res.writeHead(200, { 'content-type': 'text/html' });
     return res.end(u.searchParams.get('awb') === '564652084194' ? sag : '<html><body>Sagawa Global Tracking<table><tr><td>DATE TIME</td><td>STATUS</td><td>COUNTRY</td></tr></table></body></html>');
+  }
+  if (u.pathname === '/api/track' && u.searchParams.get('id') === '18391P1005260002647147') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(apcCor);
+  }
+  if (u.pathname === '/digital-services/searchengines/api/v1/envios') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(u.searchParams.get('text') === 'PK43BG0445921910107141Q' ? cor : corNo);
   }
   if (u.pathname === '/Sabueso/ws/deliveryServices/trackOrder' && req.method === 'POST') {
     let b = '';

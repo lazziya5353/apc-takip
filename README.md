@@ -159,3 +159,12 @@ Hound Express takip servisi (`ws_pods.hound-express.com`, POST `/Sabueso/ws/deli
 - `hound-express.com/tracking.html?rastero=...` linki ya da `HX...` numarası yapıştırılabilir. APC sonucunda yerel kargo Hound Express ise yerel durum kutusu otomatik eklenir.
 - Yanıtta alıcının adı, adresi, telefonu ve vergi numarası da bulunur. Uygulama bunlara dokunmaz, yalnızca durum olaylarını alır.
 - Olay saatleri saat dilimi içermez. Meksika saati (`America/Mexico_City`) varsayılır, gerekirse `HOUND_TZ` ile değiştirilir.
+
+## Correos (İspanya)
+
+Correos'un takip sayfası anahtar istemeyen herkese açık bir JSON adresi kullanır:
+`https://api1.correos.es/digital-services/searchengines/api/v1/envios?text=<numara>&language=EN`
+
+- `correos.es` linki ya da `PK…` gibi numara yapıştırılabilir. APC/Asendia sonucunda yerel kargo Correos ise yerel durum kutusu otomatik eklenir.
+- Olay saatleri İspanya saatidir (`Europe/Madrid`), buna göre çevrilir.
+- Bu adres resmi bir API değildir; Correos değiştirebilir ya da sunucu IP'lerini engelleyebilir. Adres `CORREOS_BASE` ile değiştirilebilir.

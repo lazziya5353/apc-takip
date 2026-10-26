@@ -4,6 +4,7 @@ process.env.APC_BASE = 'http://127.0.0.1:4010';
 process.env.ASENDIA_BASE = 'http://127.0.0.1:4010';
 process.env.SAGAWA_BASE = 'http://127.0.0.1:4010';
 process.env.DAIPOST_BASE = 'http://127.0.0.1:4010';
+process.env.LAPOSTE_BASE = 'http://127.0.0.1:4010';
 const { parseInput, handleLookup } = require('../lib/apc');
 
 (async () => {
@@ -149,7 +150,7 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(as.events.find((e) => e.description === 'Delayed In Transit').category, 'Delayed');
   const asMiss = (await handleLookup('AS999999999US')).body.results[0];
   assert.equal(asMiss.ok, false);
-  assert.match(asMiss.error, /APC, Asendia, Sagawa ve DAI Post/);
+  assert.match(asMiss.error, /APC, Asendia, Sagawa, DAI Post ve La Poste/);
 
   // Sagawa: link ya da 12 haneli numara
   const ps = parseInput('https://tracking.sagawa-sgx.com/sgx/trackeng.asp?enc=ENG&cat=AWB&awb=564652084194');
@@ -199,9 +200,28 @@ const { parseInput, handleLookup } = require('../lib/apc');
   assert.equal(al.local.url, 'https://daipost.com/track?tracknbr=00393580940174033739');
   assert.equal(as.local, undefined);   // DPD gibi desteklenmeyen yerel kargoda eklenmez
 
+  // La Poste: S10 numarası Asendia'da bulunamazsa La Poste'a düşer
+  const lp = (await handleLookup('LX110028346NL')).body.results[0];
+  assert.equal(lp.ok, true);
+  assert.equal(lp.provider, 'laposte');
+  assert.equal(lp.providerName, 'La Poste');
+  assert.equal(lp.events.length, 8);
+  assert.equal(lp.delivered, false);
+  assert.equal(lp.last.category, 'Delayed');
+  assert.equal(lp.events.every((e) => e.descriptionTr), true);
+  const al2 = (await handleLookup('18391P1007260002670741')).body.results[0];
+  assert.equal(al2.provider, 'apc');
+  assert.equal(al2.localCarrier, 'La Poste');
+  assert.ok(al2.local && al2.local.ok, 'La Poste yerel bilgisi eklenmeli');
+  assert.equal(al2.local.name, 'La Poste');
+  assert.equal(al2.local.events.length, 8);
+  assert.equal(al2.local.last.category, 'Delayed');
+  const lpLink = parseInput('https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL');
+  assert.equal(lpLink.hints['LX110028346NL'], 'laposte');
+
   const none = (await handleLookup('999999999999')).body.results[0];
   assert.equal(none.ok, false);
-  assert.match(none.error, /APC, Asendia, Sagawa ve DAI Post/);
+  assert.match(none.error, /APC, Asendia, Sagawa, DAI Post ve La Poste/);
 
   // Türkçe çeviri
   assert.equal(a.last.descriptionTr, 'Gecikme var.');

@@ -8,9 +8,16 @@ const sag = fs.readFileSync(path.join(__dirname, 'fixture-sagawa.html'), 'utf8')
 const asenDai = JSON.stringify(Object.assign(JSON.parse(asen), {})).replace(/https:\/\/tracking\.dpd\.pt\/track-and-trace/g, 'https://daipost.com/track?tracknbr=00393580940174033739').replace(/"trackingNumberVendor":"[^"]*"/, '"trackingNumberVendor":"00393580940174033739"');
 const dai = fs.readFileSync(path.join(__dirname, 'fixture-daipost.html'), 'utf8');
 const daiNo = fs.readFileSync(path.join(__dirname, 'fixture-daipost-yok.html'), 'utf8');
+const lap = fs.readFileSync(path.join(__dirname, 'fixture-laposte.json'), 'utf8');
+const lapNo = fs.readFileSync(path.join(__dirname, 'fixture-laposte-yok.json'), 'utf8');
 const body = fs.readFileSync(path.join(__dirname, 'fixture.json'), 'utf8');
+const apcLa = JSON.stringify(Object.assign(JSON.parse(body), { packageNumber: 'LX110028346NL', carrierTrackingNumber: 'LX110028346NL', finalMileCarrier: 'La Poste', externalTrackingUrl: 'https://www.laposte.fr/outils/track-a-parcel?code=LX110028346NL' }));
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
+  if (u.pathname === '/api/track' && u.searchParams.get('id') === '18391P1007260002670741') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(apcLa);
+  }
   if (u.pathname === '/api/track' && u.searchParams.get('id') === '18391P1008260002682920') {
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(body);
@@ -22,6 +29,11 @@ http.createServer((req, res) => {
   if (u.pathname === '/sgx/trackeng.asp') {
     res.writeHead(200, { 'content-type': 'text/html' });
     return res.end(u.searchParams.get('awb') === '564652084194' ? sag : '<html><body>Sagawa Global Tracking<table><tr><td>DATE TIME</td><td>STATUS</td><td>COUNTRY</td></tr></table></body></html>');
+  }
+  if (u.pathname.startsWith('/ssu/sun/back/suivi-unifie/')) {
+    const ok = decodeURIComponent(u.pathname.split('/').pop()) === 'LX110028346NL';
+    res.writeHead(ok ? 200 : 404, { 'content-type': 'application/json' });
+    return res.end(ok ? lap : lapNo);
   }
   if (u.pathname === '/track') {
     res.writeHead(200, { 'content-type': 'text/html' });

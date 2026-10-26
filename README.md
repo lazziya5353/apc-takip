@@ -134,3 +134,20 @@ node test/run.js
 
 Testler gerçek bir APC yanıtının kaydıyla (`test/fixture.json`) çalışan sahte bir APC
 sunucusuna karşı koşar.
+
+## La Poste
+
+La Poste'un takip sayfası anahtar istemeyen herkese açık bir JSON adresi kullanır:
+`https://www.laposte.fr/ssu/sun/back/suivi-unifie/<numara>?lang=en`
+
+- `laposte.fr` linki ya da `LX…NL` gibi S10 numarası yapıştırılabilir. S10 numarası Asendia'da bulunamazsa La Poste denenir.
+- Asendia sonucunda yerel kargo La Poste/Colissimo ise yerel durum kutusu otomatik eklenir.
+- Adres değişirse `LAPOSTE_BASE` ortam değişkeniyle ya da `lib/apc.js` içindeki `fetchLaPoste` ile güncellenir.
+- Bu adres resmi bir API değildir; La Poste habersiz değiştirebilir ya da sunucu IP'lerini engelleyebilir.
+
+## Tekrar kontrol sonrası çubuklar
+
+"Hepsini tekrar kontrol et" bittiğinde, yeni hareketi olan her kargo için sayfanın üstünde bir çubuk çıkar.
+- Çubuğa tıklanınca o kargo açılır ve çubuk listeden kalkar, diğer çubuklar yerinde durur.
+- Fare çubuğun üzerine gelince sağda ✕ çıkar, tıklanınca yalnızca o çubuk kapanır.
+- "Hepsini kaldır" tüm çubukları tek seferde kapatır.
